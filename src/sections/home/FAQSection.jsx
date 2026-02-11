@@ -69,7 +69,7 @@ export default function FAQSection() {
                                 <Disclosure key={index} data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" as="div" className="faq-item overflow-hidden rounded-2xl lg:rounded-[0.7vw]">
                                     {({ open }) => (
                                         <>
-                                            <DisclosureButton className="flex w-full items-center justify-between py-4 lg:px-[1.5vw] lg:py-[1vw] text-left transition-colors">
+                                            <DisclosureButton className="p-2 flex w-full items-center justify-between py-4 lg:px-[1.5vw] lg:py-[1vw] text-left transition-colors">
                                                 <h6 className="font-bold pr-4 lg:pr-[2vw] text-[13px]! lg:text-[1vw]!">
                                                     {faq.question}
                                                 </h6>

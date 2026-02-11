@@ -58,9 +58,9 @@ export default function PricingSection() {
         <section className="pricing-section py-10 lg:py-[6vw] relative overflow-hidden">
             <div className="wrapper relative z-10">
                 {/* Header */}
-                <div className="flex flex-col lg:flex-row items-end justify-between gap-4 lg:gap-[5vw] mb-8 lg:mb-[4vw]">
-                    <div className="flex-1">
-                        <div data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="head flex items-center gap-2 lg:gap-[0.3vw] mb-4 lg:mb-[1.5vw]">
+                <div className="flex flex-col lg:flex-row items-center lg:items-end justify-between gap-4 lg:gap-[5vw] mb-8 lg:mb-[4vw]">
+                    <div>
+                        <div data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="head flex items-center justify-center lg:justify-start gap-2 lg:gap-[0.3vw] mb-4 lg:mb-[1.5vw]">
                             <img src="/shopping-cart-icon.svg" alt="shopping cart" />
                             <h6>Best Packages</h6>
                         </div>
@@ -68,8 +68,9 @@ export default function PricingSection() {
                             Our <span>Subscription</span> Plans
                         </h2>
                     </div>
+
                     <div data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="lg:max-w-[40%]">
-                        <p className="text-end">
+                        <p className="text-center lg:text-end">
                             Everything you need to know about booking exam places for the Permit.
                         </p>
                     </div>
@@ -90,7 +91,7 @@ export default function PricingSection() {
                             {/* Badge for highlighted plan */}
                             {plan.highlighted && plan.badge && (
                                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                                    <span className="btn-primary rounded-full! text-[0.8vw]! uppercase whitespace-nowrap">
+                                    <span className="btn-primary rounded-full! text-sm lg:text-[0.8vw]! uppercase whitespace-nowrap">
                                         {plan.badge}
                                     </span>
                                 </div>

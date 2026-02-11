@@ -45,9 +45,9 @@ export default function BenefitsSection() {
                 </div>
 
                 <div className="flex items-center justify-between">
-                    <div className="grid xs:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 lg:gap-[2vw] lg:max-w-[60%]">
+                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-0 lg:gap-[2vw] lg:max-w-[60%]">
                         {workSteps.map((step, index) => (
-                            <div key={index} data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="flex flex-col gap-2 lg:gap-[0.8vw] p-8 lg:p-[1.5vw] rounded-[10px]! lg:rounded-[1vw]!">
+                            <div key={index} data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="flex flex-col mb-3 lg:mb-0 gap-2 lg:gap-[0.8vw] p-3 lg:p-[1.5vw] rounded-[10px]! lg:rounded-[1vw]!">
                                 <img
                                     src={step.icon}
                                     className="w-10 lg:w-[3.6vw]"

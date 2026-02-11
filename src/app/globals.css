@@ -59,12 +59,12 @@ html {
   --font-sans: var(--font-inter);
 }
 
-/* @media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark) {
   :root {
     --white: #0a0a0a;
     --foreground: #ededed;
   }
-} */
+}
 
 body {
   /* white: var(--white);
@@ -96,16 +96,16 @@ body {
     @apply text-[14px]! lg:text-[1.2vw]! font-bold;
   }
 
-  /* a {
+  a {
     @apply text-[14px]! lg:text-[0.9vw]!
-  } */
+  }
 
   .btn-primary {
     @apply px-4 lg:px-[1.8vw]! py-2 lg:py-[0.621vw]! text-[12px] lg:text-[1vw] rounded-[6px] lg:rounded-[0.6vw] bg-primary-button text-white
   }
 
   .btn-secondary {
-    @apply px-4 lg:px-[1.8vw]! py-2 lg:py-[0.621vw]! text-[12px] lg:text-[1vw] rounded-[6px] lg:rounded-[0.6vw] bg-white text-primary
+    @apply px-4 lg:px-[1.8vw]! py-2 lg:py-[0.621vw]! text-[12px]! lg:text-[1vw]! rounded-[6px]! lg:rounded-[0.6vw] bg-white text-primary
   }
   
   small {
@@ -126,12 +126,7 @@ body {
   }
 
   .wrapper {
-    @apply max-w-[90%]! mx-auto;
-
-  }
-
-  .wrapper {
-    @apply lg:max-w-[80%]! mx-auto;
+    @apply max-w-[80%]! mx-auto;
 
   }
 
@@ -336,6 +331,25 @@ h1 span, h2 span{
   pointer-events: none;
 }
 
+.login-section {
+  background: linear-gradient(0deg,rgba(28, 146, 214, 0.265) 0%, rgba(114, 189, 232, 0.455) 47%, rgba(255, 255, 255, 1) 100%);
+  position: relative;
+}
+
+.login-section::before {
+  content: '';
+  position: absolute;
+  top: 0%;
+  left: 0%;
+  width: 100%;
+  height: 100%;
+  background-image: url('/section-bg.svg');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: top;
+  pointer-events: none;
+}
+
 .footer {
   background: #053447;
 }
@@ -347,4 +361,8 @@ h1 span, h2 span{
 /* Prevent hydration mismatch for GSAP animated elements */
 [data-gsap-animate] {
   will-change: transform, opacity, filter;
+}
+
+.login-form {
+  box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
 }

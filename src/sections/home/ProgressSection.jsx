@@ -17,7 +17,7 @@ export default function ProgressSection() {
                     <h6 className="font-bold">Track Your Growth</h6>
                 </div>
 
-                <div className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-4 lg:gap-[5vw]">
+                <div className="flex flex-col lg:flex-row items-end justify-between gap-4 lg:gap-[5vw]">
                     <h2 data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="lg:max-w-[40%]">
                         Your <span>Learning</span> Progress
                     </h2>

@@ -1,7 +1,5 @@
 import "./globals.css";
 import localFont from "next/font/local";
-import Header from "../layout/Header";
-import Footer from "../layout/Footer";
 
 const inter = localFont({
   src: [
@@ -29,9 +27,7 @@ export default function RootLayout({ children }) {
         className={`${inter.className} antialiased`}
         suppressHydrationWarning
       >
-        <Header />
         {children}
-        <Footer />
       </body>
     </html>
   );

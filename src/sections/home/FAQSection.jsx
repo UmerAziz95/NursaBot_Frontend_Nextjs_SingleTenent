@@ -44,7 +44,7 @@ export default function FAQSection() {
         <section className="faq-section py-10 lg:py-[6vw] relative overflow-hidden">
             <div className="wrapper relative z-10">
                 {/* Header */}
-                <div className="flex flex-col lg:flex-row items-end justify-between gap-4 lg:gap-[5vw] mb-8 lg:mb-[4vw]">
+                <div className="flex flex-col lg:flex-row md:items-start items-end justify-between gap-4 lg:gap-[5vw] mb-8 lg:mb-[4vw]">
                     <div className="flex-1">
                         <div data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="head flex items-center gap-2 lg:gap-[0.3vw] mb-4 lg:mb-[1.5vw]">
                             <img src="/faq-icon.svg" alt="FAQ icon" />
@@ -102,7 +102,7 @@ export default function FAQSection() {
                     </div>
                 </div>
             </div>
-            <div data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="absolute bottom-0 right-0 w-[40%]">
+            <div data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="absolute bottom-0 right-0 w-[40%] hidden lg:block">
                 <Image src="/faq.svg" alt="faq" width={1000} height={1000} />
             </div>
         </section>

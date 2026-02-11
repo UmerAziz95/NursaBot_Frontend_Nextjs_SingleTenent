@@ -25,7 +25,7 @@ export default function ScrollProvider({ children }) {
         gsap.registerPlugin(ScrollTrigger);
 
         const lenis = new Lenis({
-            lerp: 0.04,
+            lerp: 0.08,
             smooth: true,
             wheelMultiplier: 1,
         });

@@ -146,7 +146,7 @@ export default function PricingSection() {
                         </div>
                     ))}
 
-                    <Image data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" src="/plan.svg" alt="pricing bg" className="absolute -bottom-[10%] -right-[20%] z-0 w-1/3" width={1000} height={1000} />
+                    <Image data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" src="/plan.svg" alt="pricing bg" className="absolute -bottom-[10%] -right-[20%] z-0 w-1/3 hidden lg:block" width={1000} height={1000} />
                 </div>
             </div>
         </section>

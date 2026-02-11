@@ -59,12 +59,12 @@ html {
   --font-sans: var(--font-inter);
 }
 
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
   :root {
     --white: #0a0a0a;
     --foreground: #ededed;
   }
-}
+} */
 
 body {
   /* white: var(--white);
@@ -96,16 +96,16 @@ body {
     @apply text-[14px]! lg:text-[1.2vw]! font-bold;
   }
 
-  a {
+  /* a {
     @apply text-[14px]! lg:text-[0.9vw]!
-  }
+  } */
 
   .btn-primary {
     @apply px-4 lg:px-[1.8vw]! py-2 lg:py-[0.621vw]! text-[12px] lg:text-[1vw] rounded-[6px] lg:rounded-[0.6vw] bg-primary-button text-white
   }
 
   .btn-secondary {
-    @apply px-4 lg:px-[1.8vw]! py-2 lg:py-[0.621vw]! text-[12px]! lg:text-[1vw]! rounded-[6px]! lg:rounded-[0.6vw] bg-white text-primary
+    @apply px-4 lg:px-[1.8vw]! py-2 lg:py-[0.621vw]! text-[12px] lg:text-[1vw] rounded-[6px] lg:rounded-[0.6vw] bg-white text-primary
   }
   
   small {

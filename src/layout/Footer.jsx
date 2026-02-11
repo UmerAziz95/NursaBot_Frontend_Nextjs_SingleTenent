@@ -6,7 +6,7 @@ export default function Footer() {
             <div className="wrapper">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 lg:gap-[3vw] mb-8 lg:mb-[3vw]">
                     {/* Brand Column */}
-                    <div className="lg:col-span-1">
+                    <div className="lg:col-span-1 col-span-1">
                         <div className="mb-4 lg:mb-[1.5vw]">
                             <span className="text-2xl lg:text-[2vw] font-bold">LOGO</span>
                         </div>
@@ -37,72 +37,77 @@ export default function Footer() {
                         </div>
                     </div>
 
-                    {/* Quick Links */}
-                    <div>
-                        <h6 className="mb-4 lg:mb-[1.5vw]">Quick Links</h6>
-                        <ul className="space-y-2 lg:space-y-[0.8vw]">
-                            <li>
-                                <Link href="/" className="text-gray-300 hover:text-white transition-colors">
-                                    Home
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/assistant" className="text-gray-300 hover:text-white transition-colors">
-                                    Assistant
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="#" className="text-gray-300 hover:text-white transition-colors">
-                                    Study
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="#" className="text-gray-300 hover:text-white transition-colors">
-                                    Progress
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="#" className="text-gray-300 hover:text-white transition-colors">
-                                    FAQs
-                                </Link>
-                            </li>
-                        </ul>
-                    </div>
+                    {/* Quick Links & Resources - Side by Side on Mobile */}
+                    <div className="col-span-1 grid grid-cols-2 gap-8 lg:contents">
+                        {/* Quick Links */}
+                        <div>
+                            <h6 className="mb-4 lg:mb-[1.5vw]">Quick Links</h6>
+                            <ul className="space-y-2 lg:space-y-[0.8vw]">
+                                <li>
+                                    <Link href="/" className="text-gray-300 hover:text-white transition-colors">
+                                        Home
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link href="/assistant" className="text-gray-300 hover:text-white transition-colors">
+                                        Assistant
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link href="#" className="text-gray-300 hover:text-white transition-colors">
+                                        Study
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link href="#" className="text-gray-300 hover:text-white transition-colors">
+                                        Progress
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link href="#" className="text-gray-300 hover:text-white transition-colors">
+                                        FAQs
+                                    </Link>
+                                </li>
+                            </ul>
+                        </div>
+
 
                     {/* Resources */}
-                    <div>
-                        <h6 className="mb-4 lg:mb-[1.5vw]">Resources</h6>
-                        <ul className="space-y-2 lg:space-y-[0.8vw]">
-                            <li>
-                                <Link href="#" className="text-gray-300 hover:text-white transition-colors">
-                                    About Us
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="#" className="text-gray-300 hover:text-white transition-colors">
-                                    Pricing
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="#" className="text-gray-300 hover:text-white transition-colors">
-                                    Blog
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="#" className="text-gray-300 hover:text-white transition-colors">
-                                    Help Center
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="#" className="text-gray-300 hover:text-white transition-colors">
-                                    Contact Us
-                                </Link>
-                            </li>
-                        </ul>
+                        {/* Resources */}
+                        <div>
+                            <h6 className="mb-4 lg:mb-[1.5vw]">Resources</h6>
+                            <ul className="space-y-2 lg:space-y-[0.8vw]">
+                                <li>
+                                    <Link href="#" className="text-gray-300 hover:text-white transition-colors">
+                                        About Us
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link href="#" className="text-gray-300 hover:text-white transition-colors">
+                                        Pricing
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link href="#" className="text-gray-300 hover:text-white transition-colors">
+                                        Blog
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link href="#" className="text-gray-300 hover:text-white transition-colors">
+                                        Help Center
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link href="#" className="text-gray-300 hover:text-white transition-colors">
+                                        Contact Us
+                                    </Link>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
 
                     {/* Legal */}
-                    <div>
+                    <div className="col-span-1">
                         <h6 className="mb-4 lg:mb-[1.5vw]">Legal</h6>
                         <ul className="space-y-2 lg:space-y-[0.8vw]">
                             <li>

@@ -44,7 +44,7 @@ export default function FAQSection() {
         <section className="faq-section py-10 lg:py-[6vw] relative overflow-hidden">
             <div className="wrapper relative z-10">
                 {/* Header */}
-                <div className="flex flex-col lg:flex-row items-end justify-between gap-4 lg:gap-[5vw] mb-8 lg:mb-[4vw]">
+                <div className="flex flex-col lg:flex-row items-start md:items-end justify-between gap-4 lg:gap-[5vw] mb-8 lg:mb-[4vw]">
                     <div className="flex-1">
                         <div data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="head flex items-center gap-2 lg:gap-[0.3vw] mb-4 lg:mb-[1.5vw]">
                             <img src="/faq-icon.svg" alt="FAQ icon" />
@@ -69,7 +69,7 @@ export default function FAQSection() {
                                 <Disclosure key={index} data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" as="div" className="faq-item overflow-hidden rounded-2xl lg:rounded-[0.7vw]">
                                     {({ open }) => (
                                         <>
-                                            <DisclosureButton className="flex w-full items-center justify-between py-4 lg:px-[1.5vw] lg:py-[1vw] text-left transition-colors">
+                                            <DisclosureButton className=" p-2 flex w-full items-center justify-between py-4 lg:px-[1.5vw] lg:py-[1vw] text-left transition-colors">
                                                 <h6 className="font-bold pr-4 lg:pr-[2vw] text-[13px]! lg:text-[1vw]!">
                                                     {faq.question}
                                                 </h6>
@@ -102,7 +102,7 @@ export default function FAQSection() {
                     </div>
                 </div>
             </div>
-            <div data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="absolute bottom-0 right-0 w-[40%]">
+            <div data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="absolute bottom-0 right-0 w-[40%] hidden lg:block">
                 <Image src="/faq.svg" alt="faq" width={1000} height={1000} />
             </div>
         </section>

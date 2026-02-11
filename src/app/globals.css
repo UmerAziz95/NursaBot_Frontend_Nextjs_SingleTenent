@@ -59,12 +59,12 @@ html {
   --font-sans: var(--font-inter);
 }
 
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
   :root {
     --white: #0a0a0a;
     --foreground: #ededed;
   }
-}
+} */
 
 body {
   /* white: var(--white);

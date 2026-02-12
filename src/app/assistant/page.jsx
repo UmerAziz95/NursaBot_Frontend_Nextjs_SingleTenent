@@ -4,14 +4,23 @@ import ChatContent from "@/sections/assistant/ChatContent";
 
 export default function AssistantPage() {
     return (
-        <>
-            <div className="assistant-page flex items-start">
-                <Sidebar />
-                <div className="chatbot-content w-full h-screen">
-                    <ChatbotHeader />
+        <div className="assistant-page flex h-screen overflow-hidden">
+
+            {/* Sidebar */}
+            <Sidebar />
+
+            {/* Main Chat Area */}
+            <div className="flex flex-col flex-1 min-h-0">
+
+                {/* Header (fixed height automatically) */}
+                <ChatbotHeader />
+
+                {/* Chat Content (scrollable only here) */}
+                <div className="flex-1 min-h-0 overflow-y-auto">
                     <ChatContent />
                 </div>
+
             </div>
-        </>
-    )
+        </div>
+    );
 }

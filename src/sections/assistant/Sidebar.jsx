@@ -79,6 +79,7 @@ export default function Sidebar() {
                     {/* Logout */}
                     <button className="flex items-center justify-center gap-3 py-3 px-5 w-full bg-red-600 text-white rounded-[30px] ">
                         <ArrowLeftOnRectangleIcon className="w-6 h-6 text-white" />
+                        <span className="text-sm">logout</span>
                     </button>
                 </div>
 

@@ -37,7 +37,7 @@ import PaymentTab from '@/sections/assistant/settings/PaymentTab';
 import DataTab from '@/sections/assistant/settings/DataTab';
 import HelpTab from '@/sections/assistant/settings/HelpTab';
 import SettingTab from '@/sections/assistant/settings/SettingTab';
-// import AccountTab from '@/sections/assistant/settings/AccountTab';
+import AccountTab from '@/sections/assistant/settings/AccountTab';
 
 export default function SettingDialog({ children }) {
     return (
@@ -124,7 +124,7 @@ export default function SettingDialog({ children }) {
                         <DataTab />
                         <HelpTab />
                         <SettingTab />
-                        {/* <AccountTab /> */}
+                        <AccountTab />
                     </div>
                 </Tabs>
             </DialogContent>

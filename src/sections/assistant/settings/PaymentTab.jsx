@@ -2,7 +2,7 @@ import { TabsContent } from "@/components/ui/tabs";
 import { PencilIcon } from '@heroicons/react/24/outline';
 
 
-export default function NotificationsTab() {
+export default function PaymentTab() {
     return (
         <TabsContent value="payment" className="m-0 p-8">
             <h1 className="text-3xl font-bold">Payment Method</h1>

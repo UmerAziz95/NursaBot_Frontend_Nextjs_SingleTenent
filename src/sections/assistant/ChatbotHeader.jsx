@@ -8,11 +8,6 @@ export default function ChatbotHeader() {
                 {/* Left Section */}
                 <div className="flex items-center gap-4">
 
-                    {/* Back Button */}
-                    <div className=" p-3 bg-(--primary-color) border-2 border-white rounded-full flex items-center justify-center cursor-pointer absolute -left-[1.5%] top-[20%] ">
-                        <ChevronDoubleLeftIcon className="w-5 h-5 text-white font-extrabold!" />
-                    </div>
-
                     {/* Title */}
                     <div className="pl-10">
                         <h1 className="text-[24px]! font-semibold text-white mb-[2px]">

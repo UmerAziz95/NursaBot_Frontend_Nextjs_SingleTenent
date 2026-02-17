@@ -42,10 +42,10 @@ export default function Sidebar() {
                                 />
                             </div>
 
-                            {/* New Chat */}
+                            {/* New Chat */ }
                             <button className="flex items-center justify-center gap-1 px-4 py-3 text-white rounded-[30px] font-medium bg-(--primary-color)">
-                                <span className="text-[1vw]">New Chat</span>
-                                <span className="text-[1.2vw]">+</span>
+                                <span className="lg:text-[1vw] sm:text-[2vw]">New Chat</span>
+                                <span className="lg:text-[1.2vw]">+</span>
                             </button>
 
                             {/* Library */}

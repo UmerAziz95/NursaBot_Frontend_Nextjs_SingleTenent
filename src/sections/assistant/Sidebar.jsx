@@ -5,7 +5,7 @@ import { MagnifyingGlassIcon, ArrowLeftOnRectangleIcon, CreditCardIcon } from "@
 import { InformationCircleIcon, Cog6ToothIcon } from "@heroicons/react/24/solid";
 import { ChevronDoubleLeftIcon, ChevronDoubleRightIcon } from "@heroicons/react/24/solid";
 import SettingDialog from "@/sections/assistant/settings/Index";
-import SubscriptionDialog from "@/sections/assistant/settings/SubscriptionTab";
+// import SubscriptionDialog from "@/sections/assistant/settings/SubscriptionTab";
 
 export default function Sidebar() {
     const [isOpen, setIsOpen] = useState(true);
@@ -23,7 +23,7 @@ export default function Sidebar() {
             <div className="h-screen relative flex">
                 {/* Sidebar */}
                 {isOpen && (
-                    <aside className="w-[230px] h-full bg-white flex flex-col justify-between p-5 shadow-[2px_0_10px_rgba(0,0,0,0.05)] overflow-y-auto fixed md:relative z-50 md:z-auto">
+                    <aside className="w-57.5 h-full bg-white flex flex-col justify-between p-5 shadow-[2px_0_10px_rgba(0,0,0,0.05)] overflow-y-auto fixed md:relative z-50 md:z-auto">
                         <div className="flex flex-col gap-4">
                             {/* Logo */}
                             <div className="flex items-center gap-2.5 mb-10">
@@ -85,13 +85,13 @@ export default function Sidebar() {
                                     Settings
                                 </button>
                             </SettingDialog>
-
+{/* 
                             <SubscriptionDialog>
                                 <button className="w-full flex items-center gap-2 mb-4 text-left py-2.5 rounded-lg text-[13px] text-slate-500 hover:bg-slate-50">
                                     <CreditCardIcon className="w-6 h-6" />
                                     Subscription
                                 </button>
-                            </SubscriptionDialog>
+                            </SubscriptionDialog> */}
 
                             {/* Logout */}
                             <button className="flex items-center justify-center gap-3 py-3 px-5 w-full bg-red-600 text-white rounded-[30px]">

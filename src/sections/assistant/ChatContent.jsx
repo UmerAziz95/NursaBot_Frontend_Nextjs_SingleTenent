@@ -13,8 +13,12 @@ export default function ChatContent() {
     const [isSending, setIsSending] = useState(false)
     const [selectedImageDataUrl, setSelectedImageDataUrl] = useState("")
     const [selectedImageName, setSelectedImageName] = useState("")
+    const [isRecordingAudio, setIsRecordingAudio] = useState(false)
     const messagesEndRef = useRef(null)
     const imageInputRef = useRef(null)
+    const mediaRecorderRef = useRef(null)
+    const recordedChunksRef = useRef([])
+    const mediaStreamRef = useRef(null)
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -23,6 +27,17 @@ export default function ChatContent() {
     useEffect(() => {
         scrollToBottom()
     }, [messages])
+
+    useEffect(() => {
+        return () => {
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+                mediaRecorderRef.current.stop()
+            }
+            if (mediaStreamRef.current) {
+                mediaStreamRef.current.getTracks().forEach(track => track.stop())
+            }
+        }
+    }, [])
 
     const currentTime = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
 
@@ -185,6 +200,159 @@ export default function ChatContent() {
         }
     }
 
+    const handleSendRecordedAudio = async (audioBlob) => {
+        if (!audioBlob || isSending) {
+            return
+        }
+
+        setIsChatActive(true)
+        setIsSending(true)
+        const voiceMessageId = `voice-${Date.now()}-${Math.random().toString(36).slice(2)}`
+        setMessages(prev => [...prev, {
+            id: voiceMessageId,
+            text: 'Voice note sent',
+            sender: "user",
+            time: currentTime(),
+        }])
+
+        try {
+            const token = localStorage.getItem('token')
+            const context = resolveChatContext()
+            const formData = new FormData()
+            formData.append('audio_file', audioBlob, `voice-note-${Date.now()}.webm`)
+            formData.append('business_client_id', context.business_client_id)
+            formData.append('workspace_id', context.workspace_id)
+            formData.append('user_id', context.user_id)
+
+            const response = await fetch('/api/assistant/chat-voice', {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: formData,
+            })
+
+            let data = null
+            try {
+                data = await response.json()
+            } catch (error) {
+                data = null
+            }
+
+            if (!response.ok) {
+                const message = (data && (data.message || data.error || data.code)) || 'Voice chat request failed.'
+                throw new Error(message)
+            }
+
+            const answer = (data && (data.answer || data.message)) || 'No answer returned from assistant.'
+            const transcript = (data && (data.transcript || data.query || '')).trim()
+
+            setMessages(prev => prev.map((message) => {
+                if (message.id !== voiceMessageId) {
+                    return message
+                }
+                return {
+                    ...message,
+                    text: transcript || message.text,
+                }
+            }))
+
+            setMessages(prev => [...prev, { text: answer, sender: 'ai', time: currentTime() }])
+        } catch (error) {
+            setMessages(prev => [...prev, {
+                text: error.message || 'Unable to process voice note right now.',
+                sender: 'ai',
+                time: currentTime(),
+            }])
+        } finally {
+            setIsSending(false)
+        }
+    }
+
+    const startAudioRecording = async () => {
+        if (isSending) {
+            return
+        }
+
+        if (typeof window === 'undefined' || !navigator.mediaDevices || !window.MediaRecorder) {
+            setMessages(prev => [...prev, {
+                text: 'Voice recording is not supported in this browser.',
+                sender: 'ai',
+                time: currentTime(),
+            }])
+            return
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            mediaStreamRef.current = stream
+
+            const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                ? 'audio/webm;codecs=opus'
+                : ''
+            const recorder = mimeType
+                ? new MediaRecorder(stream, { mimeType })
+                : new MediaRecorder(stream)
+
+            recordedChunksRef.current = []
+            recorder.ondataavailable = (event) => {
+                if (event.data && event.data.size > 0) {
+                    recordedChunksRef.current.push(event.data)
+                }
+            }
+
+            recorder.onstop = async () => {
+                const chunks = recordedChunksRef.current
+                recordedChunksRef.current = []
+
+                if (mediaStreamRef.current) {
+                    mediaStreamRef.current.getTracks().forEach(track => track.stop())
+                    mediaStreamRef.current = null
+                }
+
+                if (!chunks.length) {
+                    return
+                }
+
+                const audioBlob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' })
+                await handleSendRecordedAudio(audioBlob)
+            }
+
+            recorder.start()
+            mediaRecorderRef.current = recorder
+            setIsRecordingAudio(true)
+            setIsChatActive(true)
+        } catch (error) {
+            setMessages(prev => [...prev, {
+                text: 'Microphone permission was denied or unavailable.',
+                sender: 'ai',
+                time: currentTime(),
+            }])
+        }
+    }
+
+    const stopAudioRecording = () => {
+        const recorder = mediaRecorderRef.current
+        if (!recorder) {
+            return
+        }
+
+        if (recorder.state !== 'inactive') {
+            recorder.stop()
+        }
+        mediaRecorderRef.current = null
+        setIsRecordingAudio(false)
+    }
+
+    const handleMicClick = async () => {
+        if (isRecordingAudio) {
+            stopAudioRecording()
+            return
+        }
+        await startAudioRecording()
+    }
+
     const handleKeyDown = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
@@ -236,7 +404,10 @@ export default function ChatContent() {
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyDown={handleKeyDown}
                             />
-                            <MicrophoneIcon className="w-5 h-5 md:w-6 md:h-6 text-(--primary-color) flex-shrink-0" />
+                            <MicrophoneIcon
+                                className={`w-5 h-5 md:w-6 md:h-6 flex-shrink-0 cursor-pointer ${isRecordingAudio ? 'text-red-500' : 'text-(--primary-color)'}`}
+                                onClick={handleMicClick}
+                            />
                             <CameraIcon
                                 className="w-5 h-5 md:w-6 md:h-6 text-(--primary-color) flex-shrink-0 cursor-pointer"
                                 onClick={handlePickImage}
@@ -357,12 +528,21 @@ export default function ChatContent() {
                                 autoFocus
                                 disabled={isSending}
                             />
-                            <MicrophoneIcon className="w-5 h-5 md:w-6 md:h-6 text-(--primary-color) flex-shrink-0 cursor-pointer" />
+                            <MicrophoneIcon
+                                className={`w-5 h-5 md:w-6 md:h-6 flex-shrink-0 cursor-pointer ${isRecordingAudio ? 'text-red-500' : 'text-(--primary-color)'}`}
+                                onClick={handleMicClick}
+                            />
                             <CameraIcon
                                 className="w-5 h-5 md:w-6 md:h-6 text-(--primary-color) flex-shrink-0 cursor-pointer"
                                 onClick={handlePickImage}
                             />
                         </div>
+
+                        {isRecordingAudio && (
+                            <div className="mt-2 text-xs text-red-500 px-2">
+                                Recording voice note... tap microphone again to send.
+                            </div>
+                        )}
 
                         {selectedImageName && (
                             <div className="mt-2 text-xs text-slate-500 flex items-center gap-2 px-2">

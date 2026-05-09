@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
     const [formData, setFormData] = useState({
@@ -10,6 +11,9 @@ export default function LoginPage() {
         password: '',
         rememberMe: false
     })
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState(null)
+    const router = useRouter()
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target
@@ -19,10 +23,48 @@ export default function LoginPage() {
         }))
     }
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
-        // Handle login logic here
-        console.log('Login data:', formData)
+        setLoading(true)
+        setError(null)
+        try {
+            const BASE = process.env.NEXT_PUBLIC_LARAVEL_URL || process.env.NEXT_PUBLIC_API_URL || ''
+            const url = BASE ? `${BASE.replace(/\/$/, '')}/api/auth/login` : '/api/auth/login'
+
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    email: formData.email,
+                    password: formData.password,
+                    remember: formData.rememberMe
+                })
+            })
+
+            let data = null
+            try { data = await res.json() } catch (e) { /* non-json response */ }
+
+            if (res.ok) {
+                const token = (data && (data.token || data.access_token || (data.session && data.session.access_token))) || null
+                if (token) {
+                    try { localStorage.setItem('token', token) } catch (e) { /* ignore */ }
+                }
+                if (data && data.session) {
+                    try { localStorage.setItem('session', JSON.stringify(data.session)) } catch (e) { /* ignore */ }
+                }
+                router.push('/assistant')
+                return
+            }
+
+            setError((data && (data.message || data.error)) || 'Login failed')
+        } catch (err) {
+            setError(err.message || 'Login error')
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
@@ -100,13 +142,17 @@ export default function LoginPage() {
                                 </div>
 
                                 {/* Submit Button */}
+                                {error && (
+                                    <div className="text-red-600 text-[12px] lg:text-[0.75vw] mb-2">{error}</div>
+                                )}
                                 <div className="w-full">
-                                    <Link
-                                        href="/assistant"
-                                        className="btn-primary min-w-full! block py-3 lg:py-[0.9vw] text-center font-bold cursor-pointer"
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="btn-primary min-w-full! block py-3 lg:py-[0.9vw] text-center font-bold"
                                     >
-                                        Sign In
-                                    </Link>
+                                        {loading ? 'Signing in...' : 'Sign In'}
+                                    </button>
                                 </div>
 
                                 {/* Divider */}

@@ -1,5 +1,17 @@
+import { fileURLToPath } from 'url'
+import { dirname, resolve } from 'path'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Ensure Turbopack resolves the correct project root to avoid
+  // "couldn't find the Next.js package from the project directory" errors.
+  turbopack: {
+    // use absolute project folder
+    root: resolve(__dirname),
+  },
   reactCompiler: true,
   images: {
     formats: ['image/avif', 'image/webp'],

@@ -10,7 +10,11 @@ export default function ChatContent() {
     const [isChatActive, setIsChatActive] = useState(false)
     const [messages, setMessages] = useState([])
     const [inputValue, setInputValue] = useState("")
+    const [isSending, setIsSending] = useState(false)
+    const [selectedImageDataUrl, setSelectedImageDataUrl] = useState("")
+    const [selectedImageName, setSelectedImageName] = useState("")
     const messagesEndRef = useRef(null)
+    const imageInputRef = useRef(null)
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -20,25 +24,170 @@ export default function ChatContent() {
         scrollToBottom()
     }, [messages])
 
-    const handleSendMessage = (e) => {
-        e.preventDefault()
-        if (inputValue.trim()) {
-            setMessages([...messages, { text: inputValue, sender: "user", time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) }])
-            setInputValue("")
+    const currentTime = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
 
-            // Simulate AI response
-            setTimeout(() => {
-                setMessages(prev => [...prev, {
-                    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque ut enim sed enim egestas accumsan a eu dolor.",
-                    sender: "ai",
-                    time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-                }])
-            }, 1000)
+    const parseStoredJson = (key) => {
+        try {
+            const raw = localStorage.getItem(key)
+            if (!raw) return null
+            return JSON.parse(raw)
+        } catch (error) {
+            return null
         }
     }
 
-    const handleKeyPress = (e) => {
-        if (e.key === 'Enter') {
+    const resolveChatContext = () => {
+        const defaults = parseStoredJson('api_chat_defaults') || {}
+        const session = parseStoredJson('session') || {}
+        const sessionUser = session.user || session.admin || {}
+
+        const businessClientId = String(
+            defaults.business_client_id ||
+            session.business_client_id ||
+            sessionUser.business_client_id ||
+            'acme'
+        ).trim()
+
+        const workspaceId = String(
+            defaults.workspace_id ||
+            session.workspace_id ||
+            sessionUser.workspace_id ||
+            'main'
+        ).trim()
+
+        const userId = String(
+            defaults.user_id ||
+            session.email ||
+            sessionUser.email ||
+            'admin@admin.com'
+        ).trim().toLowerCase()
+
+        return {
+            business_client_id: businessClientId,
+            workspace_id: workspaceId,
+            user_id: userId,
+        }
+    }
+
+    const clearSelectedImage = () => {
+        setSelectedImageDataUrl("")
+        setSelectedImageName("")
+        if (imageInputRef.current) {
+            imageInputRef.current.value = ""
+        }
+    }
+
+    const handlePickImage = () => {
+        imageInputRef.current?.click()
+    }
+
+    const handleImageSelected = (e) => {
+        const file = e.target.files && e.target.files[0]
+        if (!file) return
+
+        if (!file.type.startsWith('image/')) {
+            setMessages(prev => [...prev, {
+                text: 'Only image files are supported.',
+                sender: 'ai',
+                time: currentTime(),
+            }])
+            clearSelectedImage()
+            return
+        }
+
+        const maxBytes = 5 * 1024 * 1024
+        if (file.size > maxBytes) {
+            setMessages(prev => [...prev, {
+                text: 'Image too large. Max size is 5MB.',
+                sender: 'ai',
+                time: currentTime(),
+            }])
+            clearSelectedImage()
+            return
+        }
+
+        const reader = new FileReader()
+        reader.onload = () => {
+            const result = String(reader.result || "")
+            setSelectedImageDataUrl(result)
+            setSelectedImageName(file.name)
+        }
+        reader.onerror = () => {
+            setMessages(prev => [...prev, {
+                text: 'Failed to read selected image.',
+                sender: 'ai',
+                time: currentTime(),
+            }])
+            clearSelectedImage()
+        }
+        reader.readAsDataURL(file)
+    }
+
+    const handleSendMessage = async (e) => {
+        e.preventDefault()
+        const query = inputValue.trim()
+
+        if (!query || isSending) {
+            return
+        }
+
+        setIsChatActive(true)
+        setMessages(prev => [...prev, {
+            text: query,
+            sender: "user",
+            time: currentTime(),
+            imageDataUrl: selectedImageDataUrl || "",
+        }])
+        setInputValue("")
+        setIsSending(true)
+
+        try {
+            const token = localStorage.getItem('token')
+            const payload = {
+                ...resolveChatContext(),
+                query,
+                ...(selectedImageDataUrl ? { image_data_url: selectedImageDataUrl } : {}),
+            }
+
+            const response = await fetch('/api/assistant/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify(payload),
+            })
+
+            let data = null
+            try {
+                data = await response.json()
+            } catch (error) {
+                data = null
+            }
+
+            if (!response.ok) {
+                const message = (data && (data.message || data.error || data.code)) || 'Chat request failed.'
+                throw new Error(message)
+            }
+
+            const answer = (data && (data.answer || data.message)) || 'No answer returned from assistant.'
+            setMessages(prev => [...prev, { text: answer, sender: 'ai', time: currentTime() }])
+            clearSelectedImage()
+        } catch (error) {
+            setMessages(prev => [...prev, {
+                text: error.message || 'Unable to reach assistant service right now.',
+                sender: 'ai',
+                time: currentTime(),
+            }])
+        } finally {
+            setIsSending(false)
+        }
+    }
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault()
             handleSendMessage(e)
         }
     }
@@ -46,6 +195,14 @@ export default function ChatContent() {
     return (
         <div className="chat-content bg-gray-300 p-3 w-full h-full">
             <div className="chatbox w-full h-full bg-white rounded-2xl relative flex flex-col">
+                <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={handleImageSelected}
+                />
 
                 {/* logo */}
                 <div className="flex justify-center w-full pt-3">
@@ -75,10 +232,36 @@ export default function ChatContent() {
                                 placeholder="Discover the information you need in a snap!"
                                 className="w-full outline-none text-[15px] text-slate-500 placeholder:text-slate-400"
                                 onFocus={() => setIsChatActive(true)}
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
                             />
                             <MicrophoneIcon className="w-5 h-5 md:w-6 md:h-6 text-(--primary-color) flex-shrink-0" />
-                            <CameraIcon className="w-5 h-5 md:w-6 md:h-6 text-(--primary-color) flex-shrink-0" />
+                            <CameraIcon
+                                className="w-5 h-5 md:w-6 md:h-6 text-(--primary-color) flex-shrink-0 cursor-pointer"
+                                onClick={handlePickImage}
+                            />
                         </div>
+
+                        {selectedImageName && (
+                            <div className="text-xs text-slate-500 flex items-center gap-2">
+                                {selectedImageDataUrl && (
+                                    <img
+                                        src={selectedImageDataUrl}
+                                        alt="Selected upload"
+                                        className="w-8 h-8 rounded object-cover border border-slate-200"
+                                    />
+                                )}
+                                <span className="max-w-[320px] truncate">Attached: {selectedImageName}</span>
+                                <button
+                                    type="button"
+                                    className="text-red-500 cursor-pointer"
+                                    onClick={clearSelectedImage}
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        )}
 
                         {/* Suggestions */}
                         <div className="flex flex-wrap justify-center items-center gap-4">
@@ -113,6 +296,13 @@ export default function ChatContent() {
                                             </div>
                                             <div className="bg-white border border-gray-200 px-4 py-3 rounded-2xl rounded-tr-sm max-w-[600px] shadow-sm">
                                                 <p className="text-sm text-gray-800">{message.text}</p>
+                                                {message.imageDataUrl && (
+                                                    <img
+                                                        src={message.imageDataUrl}
+                                                        alt="Sent upload"
+                                                        className="mt-2 rounded-lg border border-gray-200 max-w-[220px] max-h-[220px] object-cover"
+                                                    />
+                                                )}
                                             </div>
                                             <div className="flex items-center gap-2 mt-2">
                                                 <ClipboardIcon className="w-4 h-4 text-gray-400 cursor-pointer hover:text-gray-600" />
@@ -163,12 +353,36 @@ export default function ChatContent() {
                                 className="w-full outline-none text-[15px] text-slate-500 placeholder:text-slate-400"
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
-                                onKeyPress={handleKeyPress}
+                                onKeyDown={handleKeyDown}
                                 autoFocus
+                                disabled={isSending}
                             />
                             <MicrophoneIcon className="w-5 h-5 md:w-6 md:h-6 text-(--primary-color) flex-shrink-0 cursor-pointer" />
-                            <CameraIcon className="w-5 h-5 md:w-6 md:h-6 text-(--primary-color) flex-shrink-0 cursor-pointer" />
+                            <CameraIcon
+                                className="w-5 h-5 md:w-6 md:h-6 text-(--primary-color) flex-shrink-0 cursor-pointer"
+                                onClick={handlePickImage}
+                            />
                         </div>
+
+                        {selectedImageName && (
+                            <div className="mt-2 text-xs text-slate-500 flex items-center gap-2 px-2">
+                                {selectedImageDataUrl && (
+                                    <img
+                                        src={selectedImageDataUrl}
+                                        alt="Selected upload"
+                                        className="w-8 h-8 rounded object-cover border border-slate-200"
+                                    />
+                                )}
+                                <span className="max-w-[300px] truncate">Attached: {selectedImageName}</span>
+                                <button
+                                    type="button"
+                                    className="text-red-500 cursor-pointer"
+                                    onClick={clearSelectedImage}
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

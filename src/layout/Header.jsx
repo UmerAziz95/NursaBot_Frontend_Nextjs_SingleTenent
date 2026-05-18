@@ -40,7 +40,7 @@ export default function Example() {
 
                 <div className=" flex gap-2 lg:gap-[0.5vw] lg:justify-end">
                     <Link href="/login" className="btn-secondary">Login</Link>
-                    <Link href="/login" className="btn-primary">Start Free</Link>
+                    <Link href="/create-admin" className="btn-primary">Get Started</Link>
                 </div>
             </nav>
         </header>

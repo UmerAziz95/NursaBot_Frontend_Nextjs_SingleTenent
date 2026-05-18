@@ -6,6 +6,34 @@ import { HandThumbUpIcon, HandThumbDownIcon, ClipboardIcon } from "@heroicons/re
 import { PencilIcon } from "@heroicons/react/24/solid"
 import { useState, useRef, useEffect } from "react"
 
+const generateChatId = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID()
+    }
+
+    return `chat-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+const buildChatTitle = (text) => {
+    const normalized = String(text || '').replace(/\s+/g, ' ').trim()
+    if (!normalized) return 'New chat'
+
+    return normalized.slice(0, 80)
+}
+
+const formatMessageTime = (timestamp) => {
+    if (!timestamp) {
+        return new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    }
+
+    const parsed = new Date(timestamp)
+    if (Number.isNaN(parsed.getTime())) {
+        return new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    }
+
+    return parsed.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+}
+
 export default function ChatContent() {
     const [isChatActive, setIsChatActive] = useState(false)
     const [messages, setMessages] = useState([])
@@ -14,11 +42,15 @@ export default function ChatContent() {
     const [selectedImageDataUrl, setSelectedImageDataUrl] = useState("")
     const [selectedImageName, setSelectedImageName] = useState("")
     const [isRecordingAudio, setIsRecordingAudio] = useState(false)
+    const [isLoadingThread, setIsLoadingThread] = useState(false)
+    const [chatId, setChatId] = useState("")
+    const [chatTitle, setChatTitle] = useState("")
     const messagesEndRef = useRef(null)
     const imageInputRef = useRef(null)
     const mediaRecorderRef = useRef(null)
     const recordedChunksRef = useRef([])
     const mediaStreamRef = useRef(null)
+    const threadLoadSeqRef = useRef(0)
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -36,6 +68,135 @@ export default function ChatContent() {
             if (mediaStreamRef.current) {
                 mediaStreamRef.current.getTracks().forEach(track => track.stop())
             }
+        }
+    }, [])
+
+    const resetComposerState = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop()
+        }
+        if (mediaStreamRef.current) {
+            mediaStreamRef.current.getTracks().forEach(track => track.stop())
+            mediaStreamRef.current = null
+        }
+
+        recordedChunksRef.current = []
+        setIsSending(false)
+        setSelectedImageDataUrl("")
+        setSelectedImageName("")
+        setIsRecordingAudio(false)
+    }
+
+    const loadChatThread = async (nextChatId, nextChatTitle = '') => {
+        const requestSeq = ++threadLoadSeqRef.current
+
+        resetComposerState()
+        setIsLoadingThread(true)
+        setIsChatActive(true)
+        setMessages([])
+        setInputValue("")
+        setChatId(nextChatId)
+        setChatTitle(nextChatTitle)
+
+        try {
+            const token = localStorage.getItem('token')
+            const base = process.env.NEXT_PUBLIC_LARAVEL_URL || process.env.NEXT_PUBLIC_API_URL || ''
+            const url = base
+                ? `${base.replace(/\/$/, '')}/api/chat/threads/${encodeURIComponent(nextChatId)}`
+                : `/api/chat/threads/${encodeURIComponent(nextChatId)}`
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    Accept: 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                credentials: 'include',
+            })
+
+            let data = null
+            try {
+                data = await response.json()
+            } catch (error) {
+                data = null
+            }
+
+            if (!response.ok) {
+                if (response.status === 404) {
+                    if (threadLoadSeqRef.current === requestSeq) {
+                        setChatTitle(nextChatTitle)
+                        setMessages([])
+                    }
+                    return
+                }
+
+                const message = (data && (data.detail || data.message || data.code)) || 'Unable to load conversation.'
+                throw new Error(message)
+            }
+
+            if (threadLoadSeqRef.current !== requestSeq) {
+                return
+            }
+
+            const threadMessages = Array.isArray(data?.messages)
+                ? data.messages.map((message, index) => ({
+                    id: `${nextChatId}-${index}`,
+                    text: message.content || '',
+                    sender: message.role === 'assistant' ? 'ai' : 'user',
+                    time: formatMessageTime(message.timestamp),
+                    imageDataUrl: '',
+                }))
+                : []
+
+            setMessages(threadMessages)
+            setChatTitle(data?.title || nextChatTitle || '')
+            setIsChatActive(true)
+        } catch (error) {
+            if (threadLoadSeqRef.current !== requestSeq) {
+                return
+            }
+
+            setMessages([{
+                text: error.message || 'Unable to load conversation.',
+                sender: 'ai',
+                time: currentTime(),
+            }])
+            setChatTitle(nextChatTitle || '')
+            setIsChatActive(true)
+        } finally {
+            if (threadLoadSeqRef.current === requestSeq) {
+                setIsLoadingThread(false)
+            }
+        }
+    }
+
+    useEffect(() => {
+        const handleNewChat = (event) => {
+            const nextChatId = String(event?.detail?.chat_id || '').trim() || generateChatId()
+
+            threadLoadSeqRef.current += 1
+            resetComposerState()
+            setIsLoadingThread(false)
+            setIsChatActive(false)
+            setMessages([])
+            setInputValue("")
+            setChatId(nextChatId)
+            setChatTitle("")
+        }
+
+        const handleOpenChat = (event) => {
+            const nextChatId = String(event?.detail?.chat_id || '').trim()
+            if (!nextChatId) return
+
+            void loadChatThread(nextChatId, String(event?.detail?.chat_title || '').trim())
+        }
+
+        window.addEventListener('assistant-new-chat', handleNewChat)
+        window.addEventListener('assistant-open-chat', handleOpenChat)
+
+        return () => {
+            window.removeEventListener('assistant-new-chat', handleNewChat)
+            window.removeEventListener('assistant-open-chat', handleOpenChat)
         }
     }, [])
 
@@ -92,7 +253,22 @@ export default function ChatContent() {
         }
     }
 
+    const notifyChatHeadersUpdated = (nextChatId, nextChatTitle) => {
+        if (typeof window === 'undefined') return
+
+        window.dispatchEvent(new CustomEvent('assistant-chat-headers-updated', {
+            detail: {
+                chat_id: nextChatId,
+                chat_title: nextChatTitle,
+            },
+        }))
+    }
+
     const handlePickImage = () => {
+        if (isLoadingThread) {
+            return
+        }
+
         imageInputRef.current?.click()
     }
 
@@ -142,7 +318,7 @@ export default function ChatContent() {
         e.preventDefault()
         const query = inputValue.trim()
 
-        if (!query || isSending) {
+        if (!query || isSending || isLoadingThread) {
             return
         }
 
@@ -157,10 +333,22 @@ export default function ChatContent() {
         setIsSending(true)
 
         try {
+            const nextChatId = chatId || generateChatId()
+            const nextChatTitle = chatTitle || buildChatTitle(query)
+
+            if (!chatId) {
+                setChatId(nextChatId)
+            }
+            if (!chatTitle) {
+                setChatTitle(nextChatTitle)
+            }
+
             const token = localStorage.getItem('token')
             const payload = {
                 ...resolveChatContext(),
                 query,
+                chat_id: nextChatId,
+                chat_title: nextChatTitle,
                 ...(selectedImageDataUrl ? { image_data_url: selectedImageDataUrl } : {}),
             }
 
@@ -189,6 +377,7 @@ export default function ChatContent() {
             const answer = (data && (data.answer || data.message)) || 'No answer returned from assistant.'
             setMessages(prev => [...prev, { text: answer, sender: 'ai', time: currentTime() }])
             clearSelectedImage()
+            notifyChatHeadersUpdated(nextChatId, nextChatTitle)
         } catch (error) {
             setMessages(prev => [...prev, {
                 text: error.message || 'Unable to reach assistant service right now.',
@@ -201,7 +390,7 @@ export default function ChatContent() {
     }
 
     const handleSendRecordedAudio = async (audioBlob) => {
-        if (!audioBlob || isSending) {
+        if (!audioBlob || isSending || isLoadingThread) {
             return
         }
 
@@ -216,6 +405,13 @@ export default function ChatContent() {
         }])
 
         try {
+            const nextChatId = chatId || generateChatId()
+            const nextChatTitle = chatTitle || ''
+
+            if (!chatId) {
+                setChatId(nextChatId)
+            }
+
             const token = localStorage.getItem('token')
             const context = resolveChatContext()
             const formData = new FormData()
@@ -223,6 +419,10 @@ export default function ChatContent() {
             formData.append('business_client_id', context.business_client_id)
             formData.append('workspace_id', context.workspace_id)
             formData.append('user_id', context.user_id)
+            formData.append('chat_id', nextChatId)
+            if (nextChatTitle) {
+                formData.append('chat_title', nextChatTitle)
+            }
 
             const response = await fetch('/api/assistant/chat-voice', {
                 method: 'POST',
@@ -247,6 +447,11 @@ export default function ChatContent() {
 
             const answer = (data && (data.answer || data.message)) || 'No answer returned from assistant.'
             const transcript = (data && (data.transcript || data.query || '')).trim()
+            const resolvedChatTitle = chatTitle || buildChatTitle(transcript || 'Voice note')
+
+            if (!chatTitle) {
+                setChatTitle(resolvedChatTitle)
+            }
 
             setMessages(prev => prev.map((message) => {
                 if (message.id !== voiceMessageId) {
@@ -259,6 +464,7 @@ export default function ChatContent() {
             }))
 
             setMessages(prev => [...prev, { text: answer, sender: 'ai', time: currentTime() }])
+            notifyChatHeadersUpdated(nextChatId, resolvedChatTitle)
         } catch (error) {
             setMessages(prev => [...prev, {
                 text: error.message || 'Unable to process voice note right now.',
@@ -271,7 +477,7 @@ export default function ChatContent() {
     }
 
     const startAudioRecording = async () => {
-        if (isSending) {
+        if (isSending || isLoadingThread) {
             return
         }
 
@@ -346,6 +552,10 @@ export default function ChatContent() {
     }
 
     const handleMicClick = async () => {
+        if (isLoadingThread) {
+            return
+        }
+
         if (isRecordingAudio) {
             stopAudioRecording()
             return
@@ -455,6 +665,11 @@ export default function ChatContent() {
                 {/* Chat messages area - shows when chat is active */}
                 {isChatActive && (
                     <div className="flex-1 overflow-y-auto px-4 py-4">
+                        {isLoadingThread && messages.length === 0 && (
+                            <div className="py-8 text-center text-sm text-slate-500">
+                                Loading conversation...
+                            </div>
+                        )}
                         {messages.map((message, index) => (
                             <div key={index}>
                                 {message.sender === 'user' ? (
@@ -526,7 +741,7 @@ export default function ChatContent() {
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyDown={handleKeyDown}
                                 autoFocus
-                                disabled={isSending}
+                                disabled={isSending || isLoadingThread}
                             />
                             <MicrophoneIcon
                                 className={`w-5 h-5 md:w-6 md:h-6 flex-shrink-0 cursor-pointer ${isRecordingAudio ? 'text-red-500' : 'text-(--primary-color)'}`}

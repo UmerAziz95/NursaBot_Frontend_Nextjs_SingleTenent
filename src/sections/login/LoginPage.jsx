@@ -52,6 +52,9 @@ export default function LoginPage() {
                 if (token) {
                     try { localStorage.setItem('token', token) } catch (e) { /* ignore */ }
                 }
+                if (data && data.user) {
+                    try { localStorage.setItem('user', JSON.stringify(data.user)) } catch (e) { /* ignore */ }
+                }
                 if (data && data.session) {
                     try { localStorage.setItem('session', JSON.stringify(data.session)) } catch (e) { /* ignore */ }
                 }

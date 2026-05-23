@@ -187,6 +187,13 @@ export default function LoginPage() {
                                         <span className="text-[12px] lg:text-[0.75vw] font-medium">Facebook</span>
                                     </button>
                                 </div>
+
+                                <div className="text-center text-[12px] lg:text-[0.75vw] text-gray-600">
+                                    Don&apos;t have an account?{' '}
+                                    <Link href="/signup" className="text-[#053447] hover:text-[#2EAADB] transition-colors font-medium">
+                                        Sign up
+                                    </Link>
+                                </div>
                             </form>
                         </div>
                     </div>

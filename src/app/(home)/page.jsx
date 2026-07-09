@@ -1,47 +1,41 @@
-import dynamic from "next/dynamic";
-import HeroSection from "@/sections/home/HeroSection";
-import ScrollProvider from "@/components/ScrollProvider";
-import WorkSection from "@/sections/home/WorkSection";
-import LearnSection from "@/sections/home/LearnSection";
-import BenefitsSection from "@/sections/home/BenefitsSection";
-import ProgressSection from "@/sections/home/ProgressSection";
-import PricingSection from "@/sections/home/PricingSection";
-import FAQSection from "@/sections/home/FAQSection";
-import ContactSection from "@/sections/home/ContactSection";
+'use client'
 
-// Lazy load sections below the fold for better initial load performance
-// const LearnSection = dynamic(() => import("@/sections/home/LearnSection"), {
-//   loading: () => <div className="min-h-[50vh]" />,
-// });
-// const BenefitsSection = dynamic(() => import("@/sections/home/BenefitsSection"), {
-//   loading: () => <div className="min-h-[50vh]" />,
-// });
-// const ProgressSection = dynamic(() => import("@/sections/home/ProgressSection"), {
-//   loading: () => <div className="min-h-[50vh]" />,
-// });
-// const PricingSection = dynamic(() => import("@/sections/home/PricingSection"), {
-//   loading: () => <div className="min-h-[50vh]" />,
-// });
-// const FAQSection = dynamic(() => import("@/sections/home/FAQSection"), {
-//   loading: () => <div className="min-h-[50vh]" />,
-// });
-// const ContactSection = dynamic(() => import("@/sections/home/ContactSection"), {
-//   loading: () => <div className="min-h-[50vh]" />,
-// });
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function Home() {
-  return (
-    <div>
-      <ScrollProvider>
-        <HeroSection />
-        <WorkSection />
-        <LearnSection />
-        <BenefitsSection />
-        <ProgressSection />
-        <PricingSection />
-        <FAQSection />
-        <ContactSection />
-      </ScrollProvider>
-    </div>
-  );
+    const router = useRouter()
+
+    useEffect(() => {
+        const redirect = async () => {
+            // Check whether any users exist – if not, show signup (first-run)
+            try {
+                const BASE = process.env.NEXT_PUBLIC_LARAVEL_URL || 'http://localhost:8001'
+                const url = BASE ? `${BASE.replace(/\/$/, '')}/api/setup/status` : '/api/setup/status'
+                const res = await fetch(url, { headers: { Accept: 'application/json' } })
+                if (res.ok) {
+                    const data = await res.json()
+                    if (data.needs_setup) {
+                        router.replace('/signup')
+                        return
+                    }
+                }
+            } catch {
+                // If the API is unreachable, fall through to next checks
+            }
+
+            // After setup check, route users to login (root should not auto-navigate
+            // to `/assistant`). The app can still navigate to `/assistant` after
+            // successful login or by direct link.
+            router.replace('/login')
+        }
+
+        redirect()
+    }, [router])
+
+    return (
+        <div className="min-h-screen flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-[#053447] border-t-transparent rounded-full animate-spin" />
+        </div>
+    )
 }

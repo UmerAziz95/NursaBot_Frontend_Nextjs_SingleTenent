@@ -15,18 +15,7 @@ import {
     TabsList,
     TabsTrigger,
 } from "@/components/ui/tabs";
-import {
-    UserCircleIcon,
-    BellIcon,
-    PaintBrushIcon,
-    CreditCardIcon,
-    CircleStackIcon,
-    QuestionMarkCircleIcon,
-    Cog6ToothIcon,
-    UserIcon,
-    ArrowLeftIcon,
-    PencilIcon
-} from '@heroicons/react/24/outline';
+import { UserCircle as UserCircleIcon, Bell as BellIcon, Paintbrush as PaintBrushIcon, CreditCard as CreditCardIcon, Database as CircleStackIcon, HelpCircle as QuestionMarkCircleIcon, Settings as Cog6ToothIcon, User as UserIcon, ArrowLeft as ArrowLeftIcon, Pencil as PencilIcon } from 'lucide-react';
 
 
 // Import all tab components

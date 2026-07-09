@@ -103,8 +103,8 @@ export default function AddDocumentPage() {
                     const defaults = readStoredJson('api_chat_defaults') || {}
                     setFormData((previous) => ({
                         ...previous,
-                        business_client_id: previous.business_client_id || defaults.business_client_id || session?.business_client_id || resolvedUser?.business_client_id || user?.business_client_id || 'acme',
-                        workspace_id: previous.workspace_id || defaults.workspace_id || session?.workspace_id || resolvedUser?.workspace_id || user?.workspace_id || 'main',
+                        business_client_id: previous.business_client_id || defaults.business_client_id || session?.business_client_id || resolvedUser?.business_client_id || user?.business_client_id || 'default',
+                        workspace_id: previous.workspace_id || defaults.workspace_id || session?.workspace_id || resolvedUser?.workspace_id || user?.workspace_id || 'default',
                     }))
                 }
 

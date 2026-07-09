@@ -6,7 +6,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { PencilIcon } from '@heroicons/react/24/outline';
+import { Pencil as PencilIcon } from 'lucide-react';
 
 export default function AppearanceTab() {
     return (

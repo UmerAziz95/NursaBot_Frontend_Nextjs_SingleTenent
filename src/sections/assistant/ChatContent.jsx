@@ -1,9 +1,6 @@
 "use client"
 
-import { MagnifyingGlassIcon, ArrowUpRightIcon } from "@heroicons/react/24/outline"
-import { CameraIcon, MicrophoneIcon } from "@heroicons/react/24/solid"
-import { HandThumbUpIcon, HandThumbDownIcon, ClipboardIcon } from "@heroicons/react/24/outline"
-import { PencilIcon } from "@heroicons/react/24/solid"
+import { Search as MagnifyingGlassIcon, ArrowUpRight as ArrowUpRightIcon, Camera as CameraIcon, Mic as MicrophoneIcon, ThumbsUp as HandThumbUpIcon, ThumbsDown as HandThumbDownIcon, Clipboard as ClipboardIcon, Pencil as PencilIcon } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 
 const generateChatId = () => {
@@ -221,14 +218,14 @@ export default function ChatContent() {
             defaults.business_client_id ||
             session.business_client_id ||
             sessionUser.business_client_id ||
-            'acme'
+            'default'
         ).trim()
 
         const workspaceId = String(
             defaults.workspace_id ||
             session.workspace_id ||
             sessionUser.workspace_id ||
-            'main'
+            'default'
         ).trim()
 
         const userId = String(

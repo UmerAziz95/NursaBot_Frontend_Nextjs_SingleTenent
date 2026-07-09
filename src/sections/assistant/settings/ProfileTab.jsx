@@ -1,5 +1,5 @@
 import { TabsContent } from "@/components/ui/tabs";
-import { PencilIcon } from '@heroicons/react/24/outline';
+import { Pencil as PencilIcon } from 'lucide-react';
 
 
 

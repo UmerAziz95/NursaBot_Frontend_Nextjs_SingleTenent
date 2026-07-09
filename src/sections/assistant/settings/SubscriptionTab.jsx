@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { CheckIcon } from "@heroicons/react/24/outline";
+import { Check as CheckIcon } from "lucide-react";
 
 export default function SubscriptionDialog({ open, onOpenChange }) {
     const plans = [

@@ -1,9 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react";
-import { MagnifyingGlassIcon, ArrowLeftOnRectangleIcon } from "@heroicons/react/24/outline";
-import { InformationCircleIcon, Cog6ToothIcon } from "@heroicons/react/24/solid";
-import { ChevronDoubleLeftIcon, ChevronDoubleRightIcon } from "@heroicons/react/24/solid";
+import { Search as MagnifyingGlassIcon, LogOut as ArrowLeftOnRectangleIcon, Info as InformationCircleIcon, Settings as Cog6ToothIcon, ChevronsLeft as ChevronDoubleLeftIcon, ChevronsRight as ChevronDoubleRightIcon } from "lucide-react";
 import SettingDialog from "@/sections/assistant/settings/Index";
 import { logoutAndRedirect } from "@/lib/logout";
 // import SubscriptionDialog from "@/sections/assistant/settings/SubscriptionTab";

@@ -12,16 +12,7 @@ import {
     PopoverGroup,
     PopoverPanel,
 } from '@headlessui/react'
-import {
-    ArrowPathIcon,
-    Bars3Icon,
-    ChartPieIcon,
-    CursorArrowRaysIcon,
-    FingerPrintIcon,
-    SquaresPlusIcon,
-    XMarkIcon,
-} from '@heroicons/react/24/outline'
-import { ChevronDownIcon, PhoneIcon, PlayCircleIcon } from '@heroicons/react/20/solid'
+import { RefreshCw as ArrowPathIcon, AlignJustify as Bars3Icon, PieChart as ChartPieIcon, MousePointerClick as CursorArrowRaysIcon, Fingerprint as FingerPrintIcon, LayoutGrid as SquaresPlusIcon, X as XMarkIcon, ChevronDown as ChevronDownIcon, Phone as PhoneIcon, PlayCircle as PlayCircleIcon } from 'lucide-react'
 
 import Link from 'next/link'
 

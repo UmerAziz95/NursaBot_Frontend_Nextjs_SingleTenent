@@ -1,6 +1,6 @@
 import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { CreditCardIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
+import { CreditCard as CreditCardIcon, SquarePen as PencilSquareIcon } from 'lucide-react';
 
 export default function PaymentTab() {
     const cards = [

@@ -61,7 +61,7 @@ function CheckoutForm({ plan, onSuccess }) {
 
         try {
             const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-            const BASE = process.env.NEXT_PUBLIC_LARAVEL_URL || process.env.NEXT_PUBLIC_API_URL || ''
+            const BASE = (process.env.NEXT_PUBLIC_FASTAPI_URL || process.env.NEXT_PUBLIC_LARAVEL_URL || process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '')
             const headers = {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
@@ -69,7 +69,7 @@ function CheckoutForm({ plan, onSuccess }) {
             }
 
             // 1. Create PaymentIntent on server
-            const intentRes = await fetch(`${BASE.replace(/\/$/, '')}/api/payments/create-intent`, {
+            const intentRes = await fetch(`${BASE}/api/payments/create-intent`, {
                 method: 'POST',
                 headers,
                 credentials: 'include',
@@ -106,7 +106,7 @@ function CheckoutForm({ plan, onSuccess }) {
             }
 
             // 3. Confirm plan on server
-            const confirmRes = await fetch(`${BASE.replace(/\/$/, '')}/api/payments/confirm-plan`, {
+            const confirmRes = await fetch(`${BASE}/api/payments/confirm-plan`, {
                 method: 'POST',
                 headers,
                 credentials: 'include',

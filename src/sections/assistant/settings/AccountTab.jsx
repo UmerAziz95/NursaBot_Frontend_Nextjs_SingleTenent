@@ -1,6 +1,6 @@
 import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { SparklesIcon } from '@heroicons/react/24/outline';
+import { Sparkles as SparklesIcon } from 'lucide-react';
 
 export default function AccountTab() {
     return (

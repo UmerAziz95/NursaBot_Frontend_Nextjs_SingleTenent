@@ -4,6 +4,15 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
+import { AlertCircle as AlertCircleIcon } from 'lucide-react'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from '@/components/ui/dialog'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '')
 
@@ -131,23 +140,42 @@ function CheckoutForm({ plan, onSuccess }) {
     }
 
     return (
-        <form onSubmit={handlePay} className="space-y-4 lg:space-y-[1.2vw]">
-            <div className="border border-gray-400 rounded-lg lg:rounded-[0.8vw] px-4 lg:px-[1.2vw] py-3 lg:py-[0.9vw] bg-white">
-                <CardElement options={CARD_ELEMENT_OPTIONS} />
-            </div>
+        <>
+            <form onSubmit={handlePay} className="space-y-4 lg:space-y-[1.2vw]">
+                <div className="border border-gray-400 rounded-lg lg:rounded-[0.8vw] px-4 lg:px-[1.2vw] py-3 lg:py-[0.9vw] bg-white">
+                    <CardElement options={CARD_ELEMENT_OPTIONS} />
+                </div>
 
-            {error && (
-                <p className="text-red-600 text-[12px] lg:text-[0.75vw]">{error}</p>
-            )}
+                <button
+                    type="submit"
+                    disabled={!stripe || loading}
+                    className="btn-primary min-w-full! block py-3 lg:py-[0.9vw] text-center font-bold"
+                >
+                    {loading ? 'Processing…' : `Pay ${plan.price}/month`}
+                </button>
+            </form>
 
-            <button
-                type="submit"
-                disabled={!stripe || loading}
-                className="btn-primary min-w-full! block py-3 lg:py-[0.9vw] text-center font-bold"
-            >
-                {loading ? 'Processing…' : `Pay ${plan.price}/month`}
-            </button>
-        </form>
+            <Dialog open={Boolean(error)} onOpenChange={(open) => { if (!open) setError(null) }}>
+                <DialogContent className="sm:max-w-sm">
+                    <DialogHeader>
+                        <div className="flex items-center gap-2">
+                            <AlertCircleIcon className="w-5 h-5 text-red-600 shrink-0" />
+                            <DialogTitle>Payment failed</DialogTitle>
+                        </div>
+                        <DialogDescription>{error}</DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <button
+                            type="button"
+                            onClick={() => setError(null)}
+                            className="btn-primary px-5 py-2 rounded-lg font-bold text-sm"
+                        >
+                            Try again
+                        </button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
     )
 }
 

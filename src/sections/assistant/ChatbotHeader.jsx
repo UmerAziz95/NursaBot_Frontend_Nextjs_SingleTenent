@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from 'next/link'
 
-import { UserCircle as UserCircleIcon, Upload as ArrowUpTrayIcon, LogOut as ArrowRightOnRectangleIcon, Building2 as BuildingIcon, FolderPlus as FolderPlusIcon, UserPlus as UserPlusIcon } from "lucide-react";
+import { UserCircle as UserCircleIcon, LogOut as ArrowRightOnRectangleIcon, Settings2 as ManageIcon } from "lucide-react";
 
 import {
     DropdownMenu,
@@ -122,38 +122,16 @@ export default function ChatbotHeader() {
 
                 {/* Right – actions */}
                 <div className="flex items-center gap-3">
-                    {/* New Business / New Workspace / New User / Add Document – admin only */}
+                    {/* Manage – admin only. Add/delete actions for businesses, workspaces,
+                        users, and documents all live in the Manage screen now. */}
                     {isAdmin && (
-                        <>
-                            <Link
-                                href="/create-business"
-                                className="px-3 py-2 bg-white/95 rounded-[15px] flex items-center gap-2 cursor-pointer font-medium border border-white/15 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md shrink-0 whitespace-nowrap"
-                            >
-                                <BuildingIcon className="w-4 h-4 text-slate-600" />
-                                <span className="text-sm text-slate-700">New business</span>
-                            </Link>
-                            <Link
-                                href="/create-workspace"
-                                className="px-3 py-2 bg-white/95 rounded-[15px] flex items-center gap-2 cursor-pointer font-medium border border-white/15 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md shrink-0 whitespace-nowrap"
-                            >
-                                <FolderPlusIcon className="w-4 h-4 text-slate-600" />
-                                <span className="text-sm text-slate-700">New workspace</span>
-                            </Link>
-                            <Link
-                                href="/create-user"
-                                className="px-3 py-2 bg-white/95 rounded-[15px] flex items-center gap-2 cursor-pointer font-medium border border-white/15 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md shrink-0 whitespace-nowrap"
-                            >
-                                <UserPlusIcon className="w-4 h-4 text-slate-600" />
-                                <span className="text-sm text-slate-700">New user</span>
-                            </Link>
-                            <Link
-                                href="/add-document"
-                                className="px-3 py-2 bg-white/95 rounded-[15px] flex items-center gap-2 cursor-pointer font-medium border border-white/15 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md shrink-0 whitespace-nowrap"
-                            >
-                                <ArrowUpTrayIcon className="w-4 h-4 text-slate-600" />
-                                <span className="text-sm text-slate-700">Add document</span>
-                            </Link>
-                        </>
+                        <Link
+                            href="/manage"
+                            className="px-3 py-2 bg-white/95 rounded-[15px] flex items-center gap-2 cursor-pointer font-medium border border-white/15 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md shrink-0 whitespace-nowrap"
+                        >
+                            <ManageIcon className="w-4 h-4 text-slate-600" />
+                            <span className="text-sm text-slate-700">Manage</span>
+                        </Link>
                     )}
 
                     {/* User account dropdown */}

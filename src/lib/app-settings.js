@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { getLaravelApiUrl } from '@/lib/laravel-api'
 
 const DEFAULT_SETTINGS = {
-    site_name: 'NursingAI',
+    site_name: 'nclexium',
     support_email: '',
     maintenance_mode: false,
     maintenance_message: 'We are performing scheduled maintenance. Please try again soon.',

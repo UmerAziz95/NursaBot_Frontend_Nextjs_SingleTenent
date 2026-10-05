@@ -454,7 +454,7 @@ export default function Sidebar() {
                             <div className="user-portal-sidebar-header">
                                 <BrandMark size="md" />
                                 <div className="min-w-0 flex-1">
-                                    <p className="user-portal-sidebar-brand">{appSettings.site_name || 'NursingAI'}</p>
+                                    <p className="user-portal-sidebar-brand">{appSettings.site_name || 'nclexium'}</p>
                                     <p className="user-portal-sidebar-subtitle">Nursing study assistant</p>
                                 </div>
                                 <button

@@ -10,6 +10,16 @@
 export const GENERIC_ERROR = 'Something went wrong. Please try again.'
 export const UNAVAILABLE_ERROR = 'The system is not responding right now. Please try again in a moment.'
 
+const SAFE_AUTH_PATTERNS = [
+    /invalid credentials/i,
+    /incorrect (password|email|captcha)/i,
+    /wrong password/i,
+    /please (complete|solve) the captcha/i,
+    /this account uses the (admin|user) sign-in/i,
+    /account has been deactivated/i,
+    /session expired/i,
+]
+
 const NETWORK_PATTERNS = [
     /failed to fetch/i,
     /networkerror/i,
@@ -56,6 +66,7 @@ const looksLikeNetworkFailure = (text) => NETWORK_PATTERNS.some((pattern) => pat
 export const looksTechnical = (text) => {
     const value = String(text || '').trim()
     if (!value) return false
+    if (SAFE_AUTH_PATTERNS.some((pattern) => pattern.test(value))) return false
     if (value.length > 180) return true
     if (/[{}[\]<>\\]|=>|::|\/\w+\/\w+/.test(value)) return true
     return TECHNICAL_PATTERNS.some((pattern) => pattern.test(value))

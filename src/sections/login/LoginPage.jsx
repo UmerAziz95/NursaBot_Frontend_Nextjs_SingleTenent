@@ -116,9 +116,12 @@ export default function LoginPage() {
         <AuthLayout
             title="Welcome back"
             subtitle="Sign in to continue your studies."
-            footer={signupEnabled ? (
-                <>New here? <Link href="/signup">Create an account</Link></>
-            ) : null}
+            footer={(
+                <>
+                    {signupEnabled ? <>New here? <Link href="/signup">Create an account</Link><br /></> : null}
+                    Staff? <Link href="/admin/signin">Use the admin sign-in page</Link>
+                </>
+            )}
         >
             {sessionExpired && (
                 <div className="nbu-notice" role="status">

@@ -29,7 +29,7 @@ const TABS = [
 ]
 
 const emptySettings = {
-    site_name: 'NursingAI',
+    site_name: 'nclexium',
     support_email: '',
     site_tagline: '',
     social_facebook_url: '',

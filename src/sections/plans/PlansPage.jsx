@@ -336,7 +336,7 @@ export default function PlansPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const { settings } = useAppSettings()
-    const siteName = settings.site_name || 'NursingAI'
+    const siteName = settings.site_name || 'nclexium'
     const reason = searchParams.get('reason') || ''
     const preferredPlan = searchParams.get('plan') || ''
     const isReactivation = reason === 'expired'

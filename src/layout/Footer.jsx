@@ -16,7 +16,7 @@ const SOCIAL = [
 
 export default function Footer() {
     const { settings } = useAppSettings()
-    const siteName = settings.site_name || 'NursingAI'
+    const siteName = settings.site_name || 'nclexium'
     const tagline = settings.site_tagline || 'Your AI study companion for nursing school and the NCLEX.'
     const supportEmail = String(settings.support_email || '').trim()
     const signupEnabled = !settings.maintenance_mode && settings.user_signup_enabled

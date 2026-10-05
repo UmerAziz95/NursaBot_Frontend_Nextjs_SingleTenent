@@ -47,7 +47,7 @@ export default function UserSignupPage() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const { settings, loading: settingsLoading } = useAppSettings()
-  const siteName = settings.site_name || 'NursingAI'
+  const siteName = settings.site_name || 'nclexium'
 
   const strength = passwordStrength(formData.password)
   const confirmTouched = formData.confirmPassword.length > 0

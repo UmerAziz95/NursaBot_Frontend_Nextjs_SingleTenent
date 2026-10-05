@@ -45,7 +45,7 @@ export default function AdminSidebar({ role = 'admin', user = null, collapsed = 
                 <div className="nba-sidebar-brand">
                     <BrandMark size="md" />
                     <div className="nba-sidebar-brand-text">
-                        <span className="nba-sidebar-brand-name">{settings.site_name || 'NursingAI'}</span>
+                        <span className="nba-sidebar-brand-name">{settings.site_name || 'nclexium'}</span>
                         <span className="nba-sidebar-brand-tag">{role === 'sub_admin' ? 'Sub-admin console' : 'Admin console'}</span>
                     </div>
                     <button type="button" className="nba-sidebar-close" onClick={onCloseMobile} aria-label="Close menu">

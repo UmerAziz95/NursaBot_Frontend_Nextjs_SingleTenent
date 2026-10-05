@@ -106,7 +106,7 @@ export default function AdminSignInPage() {
                 <div className="nba-auth-brand-top">
                     <BrandMark size="md" />
                     <div>
-                        <div className="nba-auth-brand-name">{settings.site_name || 'NursingAI'}</div>
+                        <div className="nba-auth-brand-name">{settings.site_name || 'nclexium'}</div>
                         <div className="nba-auth-brand-tag">Admin console</div>
                     </div>
                 </div>
@@ -125,7 +125,7 @@ export default function AdminSignInPage() {
                 <div className="nba-auth-card">
                     <div className="nba-auth-mobile-brand">
                         <BrandMark size="md" />
-                        <span>{settings.site_name || 'NursingAI'}</span>
+                        <span>{settings.site_name || 'nclexium'}</span>
                     </div>
                     <span className="nba-auth-kicker"><ShieldCheckIcon className="h-3.5 w-3.5" />Admin sign in</span>
                     <h1 className="nba-auth-title">Welcome back</h1>

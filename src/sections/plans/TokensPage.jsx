@@ -215,7 +215,7 @@ export default function TokensPage() {
     const router = useRouter()
     const outOfTokens = useSearchParams().get('reason') === 'quota'
     const { settings } = useAppSettings()
-    const siteName = settings.site_name || 'NursingAI'
+    const siteName = settings.site_name || 'nclexium'
 
     const [overview, setOverview] = useState(null)
     const [loadFailed, setLoadFailed] = useState(false)

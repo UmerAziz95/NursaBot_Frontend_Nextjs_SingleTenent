@@ -19,8 +19,11 @@ const inter = localFont({
 });
 
 export const metadata = {
-  title: "AI Bot for NCLEX Prep",
-  description: "AI Bot for NCLEX Prep",
+  title: {
+    default: "nclexium",
+    template: "%s · nclexium",
+  },
+  description: "Your AI study companion for nursing school and the NCLEX.",
 };
 
 export default function RootLayout({ children }) {

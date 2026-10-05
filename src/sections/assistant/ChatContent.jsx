@@ -999,7 +999,7 @@ export default function ChatContent() {
         }
     }
 
-    const siteName = appSettings.site_name || 'NursingAI'
+    const siteName = appSettings.site_name || 'nclexium'
     const composerDisabled = isSending || isLoadingThread
     const canSubmit = !composerDisabled && (isRecordingAudio || Boolean(pendingAudio) || Boolean(inputValue.trim()))
     const showWelcome = !isLoadingThread && messages.length === 0

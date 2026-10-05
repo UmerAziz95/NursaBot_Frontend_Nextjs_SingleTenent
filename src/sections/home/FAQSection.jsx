@@ -55,7 +55,7 @@ const buildFaqs = (siteName, settings) => [
 
 export default function FAQSection() {
     const { settings } = useAppSettings()
-    const siteName = settings.site_name || 'NursingAI'
+    const siteName = settings.site_name || 'nclexium'
     const faqs = buildFaqs(siteName, settings)
     const [open, setOpen] = useState(0)
 

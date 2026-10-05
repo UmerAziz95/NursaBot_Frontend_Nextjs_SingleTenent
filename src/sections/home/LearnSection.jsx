@@ -45,7 +45,7 @@ A. Prominent U waves  **B. Tall, peaked T waves ✓**  C. ST depression  D. Flat
 
 export default function LearnSection() {
     const { settings } = useAppSettings()
-    const siteName = settings.site_name || 'NursingAI'
+    const siteName = settings.site_name || 'nclexium'
     const [mode, setMode] = useState(DEFAULT_ANSWER_MODE)
     const active = ANSWER_MODES.find((item) => item.key === mode) || ANSWER_MODES[0]
 

@@ -20,7 +20,7 @@ import '@/sections/auth/auth.css'
  */
 export default function AuthLayout({ title, subtitle, children, footer }) {
     const { settings } = useAppSettings()
-    const siteName = settings.site_name || 'NursingAI'
+    const siteName = settings.site_name || 'nclexium'
 
     return (
         <div className="user-portal nbu-auth">

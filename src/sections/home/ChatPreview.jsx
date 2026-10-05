@@ -26,7 +26,7 @@ const RECENT = ['Priority interventions for DKA', 'Cardiac meds practice quiz', 
 
 // A faithful, non-interactive replica of the real chat screen, built from the
 // same components and styles the app uses (nb-* classes), so it never drifts.
-export default function ChatPreview({ siteName = 'NursingAI' }) {
+export default function ChatPreview({ siteName = 'nclexium' }) {
     const rootRef = useRef(null)
     const [step, setStep] = useState(0) // 0 empty · 1 question · 2 thinking · 3 answer
 

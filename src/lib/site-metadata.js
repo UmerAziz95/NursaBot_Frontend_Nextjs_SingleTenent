@@ -1,7 +1,7 @@
 // Server-side helpers for page metadata (titles, descriptions, social previews).
 
 const DEFAULT_SITE = {
-    site_name: 'NursingAI',
+    site_name: 'nclexium',
     site_tagline: 'Your AI study companion for nursing school and the NCLEX.',
 }
 
@@ -23,11 +23,11 @@ export async function fetchPublicSettings() {
 export async function buildPageMetadata({ title, description, path = '/' } = {}) {
     const settings = await fetchPublicSettings()
     const siteName = settings.site_name || DEFAULT_SITE.site_name
-    const fullTitle = title ? `${title} · ${siteName}` : `${siteName} — AI study assistant for nursing students`
+    const fullTitle = title ? `${title} · ${siteName}` : siteName
     const desc = description || settings.site_tagline || DEFAULT_SITE.site_tagline
 
     return {
-        title: fullTitle,
+        title: { absolute: fullTitle },
         description: desc,
         alternates: { canonical: path },
         openGraph: { title: fullTitle, description: desc, siteName, type: 'website', url: path },

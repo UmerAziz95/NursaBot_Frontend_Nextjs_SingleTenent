@@ -21,7 +21,7 @@ export default function Header() {
     const [menuOpen, setMenuOpen] = useState(false)
     const signedIn = useSessionKind()
     const signupEnabled = !settings.maintenance_mode && settings.user_signup_enabled
-    const siteName = settings.site_name || 'NursingAI'
+    const siteName = settings.site_name || 'nclexium'
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 8)

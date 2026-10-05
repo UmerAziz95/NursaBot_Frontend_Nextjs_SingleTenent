@@ -18,7 +18,7 @@ const LEGAL_LINKS = [
  */
 export default function LegalPage({ title, intro, sections, current }) {
     const { settings } = useAppSettings()
-    const siteName = settings.site_name || 'NursingAI'
+    const siteName = settings.site_name || 'nclexium'
     const supportEmail = String(settings.support_email || '').trim()
     const contactLink = supportEmail
         ? <a href={`mailto:${supportEmail}`}>{supportEmail}</a>

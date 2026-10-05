@@ -7,7 +7,7 @@ import ChatPreview from '@/sections/home/ChatPreview'
 
 export default function HeroSection() {
     const { settings } = useAppSettings()
-    const siteName = settings.site_name || 'NursingAI'
+    const siteName = settings.site_name || 'nclexium'
     const signupEnabled = !settings.maintenance_mode && settings.user_signup_enabled
 
     return (

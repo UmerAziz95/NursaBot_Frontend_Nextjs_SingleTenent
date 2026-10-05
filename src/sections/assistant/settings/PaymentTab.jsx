@@ -4,9 +4,11 @@ import { useMemo, useState } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { TabsContent } from '@/components/ui/tabs'
-import { CreditCard as CreditCardIcon } from 'lucide-react'
+import { CreditCard as CreditCardIcon, Lock as LockIcon, Wallet as WalletIcon } from 'lucide-react'
 import { fetchLaravel } from '@/lib/laravel-api'
 import { useSettings } from '@/sections/assistant/settings/SettingsContext'
+import { PageHeader, Section } from '@/sections/assistant/settings/SettingsUI'
+import { userFacingStripeError } from '@/lib/user-facing-error'
 import { toast } from '@/lib/toast'
 
 const CARD_ELEMENT_OPTIONS = {
@@ -60,7 +62,7 @@ function ReplaceCardForm({ onSaved, onCancel }) {
             })
 
             if (stripeError) {
-                toast.error(stripeError.message || 'Could not save card.')
+                toast.error(userFacingStripeError(stripeError, 'Could not save card. Please try again.'))
                 setLoading(false)
                 return
             }
@@ -92,35 +94,31 @@ function ReplaceCardForm({ onSaved, onCancel }) {
     }
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/70 p-5">
-            <h3 className="text-sm font-semibold text-slate-900">
-                {onCancel ? 'Replace payment method' : 'Add payment method'}
-            </h3>
-            <div className="rounded-lg border border-slate-200 bg-white px-4 py-3.5">
+        <Section
+            as="form"
+            onSubmit={handleSubmit}
+            icon={CreditCardIcon}
+            title={onCancel ? 'Replace payment method' : 'Add payment method'}
+            description="Enter your card number, expiry and CVC."
+        >
+            <div className="nbs-card-input">
                 <CardElement options={CARD_ELEMENT_OPTIONS} />
             </div>
-            <div className="flex flex-wrap gap-2">
-                <button
-                    type="submit"
-                    disabled={!stripe || loading}
-                    className="user-portal-btn-primary disabled:opacity-50"
-                >
-                    {loading ? 'Saving…' : 'Save card'}
-                </button>
+            <div className="nbs-secure-note">
+                <LockIcon className="size-3.5" />
+                Processed securely by Stripe. We only store the brand, last four digits and expiry.
+            </div>
+            <div className="nbs-actions">
                 {onCancel ? (
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                    >
+                    <button type="button" onClick={onCancel} className="nbs-btn is-ghost">
                         Cancel
                     </button>
                 ) : null}
+                <button type="submit" disabled={!stripe || loading} className="nbs-btn is-primary">
+                    {loading ? 'Saving…' : 'Save card'}
+                </button>
             </div>
-            <p className="text-[11px] leading-relaxed text-slate-400">
-                Card details are processed securely by Stripe. We only store brand, last four digits, and expiry.
-            </p>
-        </form>
+        </Section>
     )
 }
 
@@ -145,51 +143,52 @@ export default function PaymentTab() {
     }
 
     return (
-        <TabsContent value="payment" className="m-0 block w-full space-y-5 p-5 outline-none md:p-7">
-            <header className="border-b border-slate-100 pb-4">
-                <h2 className="user-portal-page-title">Payment method</h2>
-                <p className="user-portal-page-desc mt-1">
-                    The card attached to your account for plan purchases.
-                </p>
-            </header>
+        <TabsContent value="payment" className="nbs-page m-0 outline-none">
+            <PageHeader title="Payment" description="The card attached to your account for plan purchases." />
 
             {hasCard && !editing ? (
-                <div className="space-y-4">
-                    <div
-                        className={`flex h-[168px] w-full max-w-[340px] flex-col justify-between rounded-2xl bg-gradient-to-br ${brandGradient(pm.brand)} p-5 text-white shadow-md`}
-                    >
-                        <div className="flex items-start justify-between gap-3">
-                            <span className="text-xs opacity-90">Saved card</span>
-                            <span className="text-sm font-semibold uppercase tracking-wide">
-                                {brandLabel(pm.brand)}
-                            </span>
+                <Section
+                    icon={CreditCardIcon}
+                    title="Saved card"
+                    description="Used when you buy or reactivate a plan."
+                    action={(
+                        <button type="button" onClick={() => setEditing(true)} className="nbs-btn is-secondary">
+                            Replace card
+                        </button>
+                    )}
+                >
+                    <div className="nbs-card-row">
+                        <div className={`nbs-paycard bg-gradient-to-br ${brandGradient(pm.brand)}`}>
+                            <div className="nbs-paycard-shine" aria-hidden="true" />
+                            <div className="relative flex items-start justify-between gap-3">
+                                <span className="nbs-paycard-chip" aria-hidden="true" />
+                                <span className="nbs-paycard-brand">{brandLabel(pm.brand)}</span>
+                            </div>
+                            <div className="relative">
+                                <div className="nbs-paycard-number">•••• •••• •••• {pm.last4}</div>
+                                <div className="nbs-paycard-meta">
+                                    <span>Expires</span>
+                                    {String(pm.exp_month || '').padStart(2, '0')}/{pm.exp_year || '——'}
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-lg tracking-[0.18em]">•••• •••• •••• {pm.last4}</p>
-                            <p className="mt-2 text-xs opacity-90">
-                                Expires {String(pm.exp_month || '').padStart(2, '0')}/{pm.exp_year || '——'}
-                            </p>
+                        <div className="nbs-secure-note is-stacked">
+                            <LockIcon className="size-4" />
+                            <div>
+                                <strong>Secured by Stripe</strong>
+                                Your full card number is never stored on our servers.
+                            </div>
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        onClick={() => setEditing(true)}
-                        className="user-portal-btn-primary gap-2"
-                    >
-                        <CreditCardIcon className="size-4" />
-                        Replace card
-                    </button>
-                </div>
+                </Section>
             ) : null}
 
             {!hasCard && !editing ? (
-                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5">
-                    <p className="text-sm text-slate-600">No payment method on file yet.</p>
-                    <button
-                        type="button"
-                        onClick={() => setEditing(true)}
-                        className="mt-4 inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#2EAADB] px-5 text-sm font-semibold text-white transition hover:bg-[#2596c0]"
-                    >
+                <div className="nbs-empty is-card">
+                    <span className="nbs-empty-icon"><WalletIcon className="size-5" /></span>
+                    <div className="nbs-empty-title">No payment method yet</div>
+                    <div className="nbs-empty-desc">Add a card to buy or reactivate a plan in one click.</div>
+                    <button type="button" onClick={() => setEditing(true)} className="nbs-btn is-primary mt-4">
                         <CreditCardIcon className="size-4" />
                         Add payment method
                     </button>
@@ -198,9 +197,7 @@ export default function PaymentTab() {
 
             {editing ? (
                 !stripePromise ? (
-                    <p className="text-sm text-slate-600">
-                        Card payments are temporarily unavailable. Please try again later or contact support.
-                    </p>
+                    <Section tone="warning" icon={CreditCardIcon} title="Card payments unavailable" description="Please try again later or contact support." />
                 ) : (
                     <Elements stripe={stripePromise}>
                         <ReplaceCardForm

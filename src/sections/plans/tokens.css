@@ -1,0 +1,310 @@
+/* ==========================================================================
+   Buy tokens page (nbt-*). Builds on the plans/checkout styles (nbp-*).
+   ========================================================================== */
+
+.nbp-page .nbt-header-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--nbp-navy);
+}
+
+.nbp-page .nbt-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 40vh;
+  color: var(--nbp-muted);
+  font-size: 0.9rem;
+}
+
+/* Balance strip */
+.nbp-page .nbt-balances {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.875rem;
+  margin: 1.25rem 0 1.5rem;
+}
+
+.nbp-page .nbt-balance {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--nbp-line);
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.nbp-page .nbt-balance.is-total {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--nbp-navy), var(--nbp-navy-2));
+  color: #fff;
+}
+
+.nbp-page .nbt-balance-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.7rem;
+  background: rgba(46, 170, 219, 0.12);
+  color: var(--nbp-cyan-ink);
+}
+
+.nbp-page .nbt-balance-icon.is-extra {
+  background: rgba(68, 182, 185, 0.14);
+  color: #1f8f92;
+}
+
+.nbp-page .nbt-balance-icon.is-total {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.nbp-page .nbt-balance-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--nbp-muted);
+}
+
+.nbp-page .nbt-balance.is-total .nbt-balance-label,
+.nbp-page .nbt-balance.is-total .nbt-balance-hint {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.nbp-page .nbt-balance-value {
+  margin-top: 0.1rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--nbp-ink);
+}
+
+.nbp-page .nbt-balance.is-total .nbt-balance-value {
+  color: #fff;
+}
+
+.nbp-page .nbt-balance-hint {
+  margin-top: 0.1rem;
+  font-size: 0.75rem;
+  color: var(--nbp-faint);
+}
+
+/* Amount picker */
+.nbp-page .nbt-presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  gap: 0.5rem;
+  margin: 1rem 0 1.1rem;
+}
+
+.nbp-page .nbt-preset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.65rem 0.5rem;
+  border: 1px solid #d8e2ea;
+  border-radius: 0.8rem;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.nbp-page .nbt-preset strong {
+  font-size: 0.95rem;
+  color: var(--nbp-navy);
+}
+
+.nbp-page .nbt-preset span {
+  font-size: 0.75rem;
+  color: var(--nbp-muted);
+}
+
+.nbp-page .nbt-preset:hover {
+  border-color: var(--nbp-cyan);
+}
+
+.nbp-page .nbt-preset.is-active {
+  border-color: var(--nbp-cyan);
+  background: rgba(46, 170, 219, 0.08);
+  box-shadow: 0 0 0 3px rgba(46, 170, 219, 0.16);
+}
+
+.nbp-page .nbt-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  padding: 0 0.9rem;
+  border: 1px solid #d8e2ea;
+  border-radius: 0.875rem;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.nbp-page .nbt-input:focus-within {
+  border-color: var(--nbp-cyan);
+  box-shadow: 0 0 0 4px rgba(46, 170, 219, 0.14);
+}
+
+.nbp-page .nbt-input.is-invalid {
+  border-color: #f87171;
+}
+
+.nbp-page .nbt-input input {
+  flex: 1;
+  min-width: 0;
+  height: 2.9rem;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--nbp-ink);
+}
+
+.nbp-page .nbt-input span {
+  font-size: 0.85rem;
+  color: var(--nbp-muted);
+}
+
+.nbp-page .nbt-footnote {
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--nbp-faint);
+}
+
+/* Success */
+.nbp-page .nbt-success-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.nbp-page .nbt-link-btn {
+  padding: 0.6rem 0.9rem;
+  border: 0;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--nbp-cyan-ink);
+  cursor: pointer;
+}
+
+.nbp-page .nbt-link-btn:hover {
+  text-decoration: underline;
+}
+
+.nbp-page .nbp-success-badge.is-muted {
+  background: rgba(46, 170, 219, 0.12);
+  color: var(--nbp-cyan-ink);
+  box-shadow: none;
+}
+
+/* Order history */
+.nbp-page .nbt-orders {
+  margin-top: 2rem;
+}
+
+.nbp-page .nbt-orders-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  color: var(--nbp-navy) !important;
+}
+
+.nbp-page .nbt-orders-table {
+  overflow: hidden;
+  border: 1px solid var(--nbp-line);
+  border-radius: 1rem;
+  background: #fff;
+}
+
+.nbp-page .nbt-orders-row {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 1fr 0.8fr;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--nbp-line);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--nbp-text);
+}
+
+.nbp-page .nbt-orders-row.is-head {
+  border-top: 0;
+  background: #f8fafc;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--nbp-muted);
+}
+
+.nbp-page .nbt-order-no {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  color: var(--nbp-navy);
+}
+
+@media (max-width: 760px) {
+  .nbp-page .nbt-balances {
+    grid-template-columns: 1fr;
+  }
+
+  .nbp-page .nbt-orders-row {
+    grid-template-columns: 1.4fr 1fr 0.8fr;
+  }
+
+  .nbp-page .nbt-orders-row > :nth-child(2),
+  .nbp-page .nbt-orders-row > :nth-child(4) {
+    display: none;
+  }
+
+  .nbp-page .nbt-header-title {
+    display: none;
+  }
+}
+
+.nbp-page .nbt-banner {
+  margin-top: 1rem;
+}
+
+/* The amount picker sits on the dark summary panel. */
+.nbp-page .nbp-summary .nbt-preset.is-active {
+  border-color: #7dd3fc;
+  background: #e6f6fc;
+  box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.35);
+}
+
+.nbp-page .nbp-summary .nbp-label {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.nbp-page .nbp-summary .nbp-field-hint {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.nbp-page .nbp-summary .nbp-field-error {
+  color: #fecaca;
+}
+
+.nbp-page .nbt-success-actions .nbp-pay-btn {
+  margin: 0;
+}

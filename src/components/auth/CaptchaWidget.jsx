@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getLaravelApiUrl } from '@/lib/laravel-api'
+import { userFacingError } from '@/lib/user-facing-error'
 
 const loadTurnstileScript = () => {
     if (typeof window === 'undefined') return Promise.resolve()
@@ -94,7 +95,7 @@ export default function CaptchaWidget({ onChange, refreshKey = 0 }) {
         } catch (err) {
             if (requestId !== requestIdRef.current) return
             setMode('error')
-            setError(err.message || 'Could not load captcha.')
+            setError(userFacingError(err.message, 'Could not load captcha. Please refresh the page.'))
             emit({ mode: 'error' })
         }
     }, [applyMathChallenge, emit])
@@ -147,7 +148,7 @@ export default function CaptchaWidget({ onChange, refreshKey = 0 }) {
                 })
             } catch (err) {
                 if (cancelled) return
-                setError(err.message || 'Captcha failed to load.')
+                setError(userFacingError(err.message, 'Captcha failed to load. Please refresh the page.'))
                 setMode('error')
                 emit({ mode: 'error' })
             }

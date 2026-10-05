@@ -2,15 +2,22 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { TabsContent } from '@/components/ui/tabs'
-import { Paperclip as PaperclipIcon, Trash2 as TrashIcon } from 'lucide-react'
+import {
+    FileText as FileIcon,
+    Inbox as InboxIcon,
+    LifeBuoy as LifebuoyIcon,
+    Lock as LockIcon,
+    MessagesSquare as MessageIcon,
+    Paperclip as PaperclipIcon,
+    SendHorizontal as SendIcon,
+    Trash2 as TrashIcon,
+} from 'lucide-react'
 import { fetchLaravel } from '@/lib/laravel-api'
 import { useSettings } from '@/sections/assistant/settings/SettingsContext'
+import { Field, PageHeader, Section, StatusPill } from '@/sections/assistant/settings/SettingsUI'
 import useHelpTicketPolling from '@/hooks/useHelpTicketPolling'
 import { toast } from '@/lib/toast'
 
-const fieldClass = 'user-portal-input'
-const labelClass = 'user-portal-label'
-const panelClass = 'user-portal-panel'
 
 const formatDate = (value) => {
     if (!value) return '—'
@@ -25,12 +32,6 @@ const formatDate = (value) => {
     } catch {
         return '—'
     }
-}
-
-const statusClass = (status) => {
-    if (status === 'answered') return 'bg-emerald-50 text-emerald-700'
-    if (status === 'closed') return 'bg-slate-100 text-slate-600'
-    return 'bg-amber-50 text-amber-800'
 }
 
 export default function HelpTab() {
@@ -165,67 +166,75 @@ export default function HelpTab() {
         }
     }
 
+    const openTickets = tickets.filter((ticket) => ticket.status !== 'closed').length
+
     return (
-        <TabsContent value="help" className="m-0 block w-full space-y-5 p-5 outline-none md:p-7">
-            <header className="border-b border-slate-100 pb-4">
-                <h2 className="user-portal-page-title">Help</h2>
-                <p className="user-portal-page-desc mt-1">
-                    Open one support ticket at a time and chat with an administrator inside the ticket.
-                    New messages refresh automatically.
-                </p>
-            </header>
+        <TabsContent value="help" className="nbs-page m-0 outline-none">
+            <PageHeader
+                title="Help & support"
+                description="Open a ticket and chat with our team inside it. New replies appear automatically."
+            />
 
             {activeTicket ? (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                    You have an active ticket <span className="font-mono font-semibold">{activeTicket.ticket_number}</span>.
-                    Close it before creating a new one.
+                <div className="nbs-banner">
+                    <MessageIcon className="size-4 shrink-0" />
+                    <div>
+                        You have an active ticket <span className="nbs-ticket-no">{activeTicket.ticket_number}</span>.
+                        Continue the conversation below, or close it to open a new one.
+                    </div>
                 </div>
             ) : (
-                <form onSubmit={onSubmit} className={`${panelClass} space-y-4 bg-slate-50/50`}>
-                    <h3 className="text-sm font-semibold text-slate-900">Open a ticket</h3>
+                <Section
+                    as="form"
+                    onSubmit={onSubmit}
+                    icon={LifebuoyIcon}
+                    title="Open a ticket"
+                    description="Tell us what happened — we usually reply within one business day."
+                >
+                    <div className="nbs-grid">
+                        <Field label="Email" htmlFor="nbs-help-email">
+                            <input
+                                id="nbs-help-email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="nbs-input"
+                                required
+                            />
+                        </Field>
+                        <Field label="Subject" htmlFor="nbs-help-subject">
+                            <input
+                                id="nbs-help-subject"
+                                type="text"
+                                value={subject}
+                                onChange={(e) => setSubject(e.target.value)}
+                                className="nbs-input"
+                                placeholder="Brief summary of the issue"
+                                maxLength={255}
+                                required
+                            />
+                        </Field>
+                    </div>
 
-                    <label className="block">
-                        <span className={labelClass}>Email</span>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className={fieldClass}
-                            required
-                        />
-                    </label>
-
-                    <label className="block">
-                        <span className={labelClass}>Subject</span>
-                        <input
-                            type="text"
-                            value={subject}
-                            onChange={(e) => setSubject(e.target.value)}
-                            className={fieldClass}
-                            placeholder="Brief summary of the issue"
-                            maxLength={255}
-                            required
-                        />
-                    </label>
-
-                    <label className="block">
-                        <span className={labelClass}>Message</span>
+                    <Field label="Message" htmlFor="nbs-help-message" trailing={`${message.length}/5000`}>
                         <textarea
+                            id="nbs-help-message"
                             value={message}
                             onChange={(e) => setMessage(e.target.value)}
-                            className={`${fieldClass} min-h-[140px] resize-y`}
+                            className="nbs-input nbs-textarea"
                             placeholder="Describe what happened and what you need help with"
                             maxLength={5000}
                             required
                         />
-                    </label>
+                    </Field>
 
-                    <div>
-                        <span className={labelClass}>Attachment (optional)</span>
+                    <Field label="Attachment" hint="Optional · image, PDF or document up to 5 MB">
                         {!file ? (
-                            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-600 transition hover:border-[#2EAADB] hover:text-[#053447]">
-                                <PaperclipIcon className="size-4 shrink-0" />
-                                <span>Attach image, PDF, or document (max 5 MB)</span>
+                            <label className="nbs-dropzone">
+                                <span className="nbs-dropzone-icon"><PaperclipIcon className="size-4" /></span>
+                                <span>
+                                    <strong>Choose a file</strong> to attach
+                                </span>
                                 <input
                                     type="file"
                                     className="hidden"
@@ -234,128 +243,143 @@ export default function HelpTab() {
                                 />
                             </label>
                         ) : (
-                            <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3.5 py-3">
-                                <div className="min-w-0">
-                                    <p className="truncate text-sm font-medium text-slate-800">{file.name}</p>
-                                    <p className="text-[11px] text-slate-400">
-                                        {(file.size / 1024).toFixed(1)} KB
-                                    </p>
+                            <div className="nbs-file">
+                                <span className="nbs-dropzone-icon"><FileIcon className="size-4" /></span>
+                                <div className="min-w-0 flex-1">
+                                    <div className="nbs-file-name">{file.name}</div>
+                                    <div className="nbs-file-size">{(file.size / 1024).toFixed(1)} KB</div>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={() => setFile(null)}
-                                    className="inline-flex size-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-red-600"
+                                    className="nbs-icon-btn is-danger"
                                     aria-label="Remove attachment"
+                                    title="Remove attachment"
                                 >
                                     <TrashIcon className="size-4" />
                                 </button>
                             </div>
                         )}
-                    </div>
+                    </Field>
 
-                    <div className="flex flex-wrap gap-2">
-                        <button
-                            type="button"
-                            onClick={resetForm}
-                            className="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                        >
-                            Cancel
+                    <div className="nbs-actions">
+                        <button type="button" onClick={resetForm} className="nbs-btn is-ghost" disabled={submitting}>
+                            Clear
                         </button>
-                        <button
-                            type="submit"
-                            disabled={submitting}
-                            className="user-portal-btn-primary disabled:opacity-50"
-                        >
+                        <button type="submit" disabled={submitting} className="nbs-btn is-primary">
+                            <SendIcon className="size-4" />
                             {submitting ? 'Opening…' : 'Open ticket'}
                         </button>
                     </div>
-                </form>
+                </Section>
             )}
 
-            <div className={panelClass}>
-                <h3 className="mb-3 text-sm font-semibold text-slate-900">Ticket chat</h3>
+            <Section
+                icon={MessageIcon}
+                title="Your tickets"
+                description={tickets.length ? `${tickets.length} total · ${openTickets} open` : 'Conversations with our support team.'}
+            >
                 {loadingTickets ? (
-                    <p className="text-sm text-slate-500">Loading…</p>
+                    <div className="space-y-3">
+                        <span className="nbs-skel h-20 w-full rounded-xl" />
+                        <span className="nbs-skel h-20 w-full rounded-xl" />
+                    </div>
                 ) : tickets.length === 0 ? (
-                    <p className="text-sm text-slate-500">No help tickets yet.</p>
+                    <div className="nbs-empty">
+                        <span className="nbs-empty-icon"><InboxIcon className="size-5" /></span>
+                        <div className="nbs-empty-title">No tickets yet</div>
+                        <div className="nbs-empty-desc">When you open a ticket, the conversation will appear here.</div>
+                    </div>
                 ) : (
                     <ul className="space-y-3">
-                        {tickets.map((ticket) => (
-                            <li key={ticket.id} className="rounded-lg border border-slate-100 bg-slate-50/80 p-3.5">
-                                <div className="flex flex-wrap items-start justify-between gap-2">
-                                    <div className="min-w-0">
-                                        <p className="font-mono text-[11px] font-semibold tracking-wide text-[#2EAADB]">
-                                            {ticket.ticket_number || ticket.id}
-                                        </p>
-                                        <p className="mt-0.5 truncate text-sm font-semibold text-slate-900">{ticket.subject}</p>
-                                        <p className="mt-0.5 text-[11px] text-slate-500">{formatDate(ticket.created_at)}</p>
-                                    </div>
-                                    <div className="flex flex-col items-end gap-2">
-                                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${statusClass(ticket.status)}`}>
-                                            {ticket.status}
-                                        </span>
-                                        {ticket.status !== 'closed' ? (
+                        {tickets.map((ticket) => {
+                            const closed = ticket.status === 'closed'
+                            return (
+                                <li key={ticket.id} className={`nbs-ticket ${closed ? 'is-closed' : ''}`}>
+                                    <div className="nbs-ticket-head">
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="nbs-ticket-no">{ticket.ticket_number || ticket.id}</span>
+                                                <StatusPill status={ticket.status} />
+                                            </div>
+                                            <div className="nbs-ticket-subject">{ticket.subject}</div>
+                                            <div className="nbs-ticket-date">Opened {formatDate(ticket.created_at)}</div>
+                                        </div>
+                                        {!closed ? (
                                             <button
                                                 type="button"
                                                 disabled={closeBusy[ticket.id]}
                                                 onClick={() => void closeTicket(ticket.id)}
-                                                className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                                className="nbs-btn is-secondary is-sm"
                                             >
                                                 {closeBusy[ticket.id] ? 'Closing…' : 'Close ticket'}
                                             </button>
                                         ) : null}
                                     </div>
-                                </div>
-                                <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">{ticket.message}</p>
-                                {ticket.has_attachment ? (
-                                    <p className="mt-2 text-[11px] text-slate-500">
-                                        Attachment: {ticket.attachment?.name || 'file'}
-                                    </p>
-                                ) : null}
-                                {Array.isArray(ticket.replies) && ticket.replies.length > 0 ? (
-                                    <div className="mt-3 space-y-2 border-t border-slate-200 pt-3">
-                                        {ticket.replies.map((reply) => {
+
+                                    <div className="nbs-thread">
+                                        <div className="nbs-bubble is-user">
+                                            <div className="nbs-bubble-meta">You · {formatDate(ticket.created_at)}</div>
+                                            <div className="nbs-bubble-text">{ticket.message}</div>
+                                            {ticket.has_attachment ? (
+                                                <div className="nbs-bubble-attachment">
+                                                    <PaperclipIcon className="size-3" />
+                                                    {ticket.attachment?.name || 'Attachment'}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                        {(Array.isArray(ticket.replies) ? ticket.replies : []).map((reply) => {
                                             const fromUser = reply.author_role === 'user'
                                             return (
-                                                <div key={reply.id} className="rounded-md bg-white px-3 py-2">
-                                                    <p className={`text-[11px] font-medium ${fromUser ? 'text-slate-500' : 'text-[#2EAADB]'}`}>
-                                                        {fromUser ? 'You' : 'Admin'} · {formatDate(reply.created_at)}
-                                                    </p>
-                                                    <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{reply.message}</p>
+                                                <div key={reply.id} className={`nbs-bubble ${fromUser ? 'is-user' : 'is-support'}`}>
+                                                    <div className="nbs-bubble-meta">
+                                                        {fromUser ? 'You' : 'Support team'} · {formatDate(reply.created_at)}
+                                                    </div>
+                                                    <div className="nbs-bubble-text">{reply.message}</div>
                                                 </div>
                                             )
                                         })}
                                     </div>
-                                ) : null}
 
-                                {ticket.status === 'closed' ? (
-                                    <p className="mt-3 text-[11px] text-slate-500">
-                                        This ticket is closed. Chat replies are disabled.
-                                    </p>
-                                ) : (
-                                    <div className="mt-3 space-y-2 border-t border-slate-200 pt-3">
-                                        <textarea
-                                            value={followUps[ticket.id] || ''}
-                                            onChange={(e) => setFollowUps((prev) => ({ ...prev, [ticket.id]: e.target.value }))}
-                                            className="min-h-[72px] w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#2EAADB] focus:ring-2 focus:ring-[#2EAADB]/20"
-                                            placeholder="Write a chat reply…"
-                                            maxLength={5000}
-                                        />
-                                        <button
-                                            type="button"
-                                            disabled={followBusy[ticket.id] || !String(followUps[ticket.id] || '').trim()}
-                                            onClick={() => void sendFollowUp(ticket.id)}
-                                            className="user-portal-btn-dark h-8 px-4 text-xs disabled:opacity-50"
-                                        >
-                                            {followBusy[ticket.id] ? 'Sending…' : 'Send chat reply'}
-                                        </button>
-                                    </div>
-                                )}
-                            </li>
-                        ))}
+                                    {closed ? (
+                                        <div className="nbs-ticket-closed">
+                                            <LockIcon className="size-3.5" />
+                                            This ticket is closed. Open a new ticket if you need more help.
+                                        </div>
+                                    ) : (
+                                        <div className="nbs-reply">
+                                            <textarea
+                                                value={followUps[ticket.id] || ''}
+                                                onChange={(e) => setFollowUps((prev) => ({ ...prev, [ticket.id]: e.target.value }))}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                                                        e.preventDefault()
+                                                        void sendFollowUp(ticket.id)
+                                                    }
+                                                }}
+                                                className="nbs-reply-input"
+                                                placeholder="Write a reply…  (Ctrl + Enter to send)"
+                                                maxLength={5000}
+                                                rows={2}
+                                            />
+                                            <button
+                                                type="button"
+                                                disabled={followBusy[ticket.id] || !String(followUps[ticket.id] || '').trim()}
+                                                onClick={() => void sendFollowUp(ticket.id)}
+                                                className="nbs-reply-send"
+                                                aria-label="Send reply"
+                                                title="Send reply"
+                                            >
+                                                <SendIcon className="size-4" />
+                                            </button>
+                                        </div>
+                                    )}
+                                </li>
+                            )
+                        })}
                     </ul>
                 )}
-            </div>
+            </Section>
         </TabsContent>
     )
 }

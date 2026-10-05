@@ -236,7 +236,14 @@ export default function ManagePlansPage({ embedded = false }) {
                                                 <p className="cell-muted">{plan.slug}</p>
                                             </td>
                                             <td className="tabular-nums">{formatTokens(plan.monthly_token_limit)}</td>
-                                            <td>{plan.price_display}/mo</td>
+                                            <td>
+                                                <p>{plan.price_display}/mo</p>
+                                                {Number(plan.monthly_token_limit) > 0 && (
+                                                    <p className="cell-muted" title="Extra tokens are sold to this plan's subscribers at the same rate">
+                                                        Top-up ${((Number(plan.price_cents) * 1_000_000) / Number(plan.monthly_token_limit) / 100).toFixed(2)} / 1M
+                                                    </p>
+                                                )}
+                                            </td>
                                             <td>{plan.markup_multiplier}×</td>
                                             <td>
                                                 <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${
@@ -309,6 +316,7 @@ export default function ManagePlansPage({ embedded = false }) {
                     {preview && (
                         <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
                             Calculated monthly price: <strong>{preview.price_display}</strong>
+                            <p className="mt-0.5 text-xs text-slate-500">Extra tokens for this plan&apos;s subscribers are sold at the same per-token rate.</p>
                             <p className="mt-0.5 text-xs text-slate-500">{preview.formula}</p>
                         </div>
                     )}

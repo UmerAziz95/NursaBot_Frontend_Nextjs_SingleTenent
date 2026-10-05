@@ -1,136 +1,183 @@
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
+import Link from 'next/link'
+import {
+    CheckCircle2 as CheckCircleIcon,
+    Loader2 as LoaderIcon,
+    Mail as MailIcon,
+    MessageSquareText as MessageIcon,
+    Send as SendIcon,
+} from 'lucide-react'
+import { useAppSettings } from '@/lib/app-settings'
+import { toast } from '@/lib/toast'
+import { userFacingError } from '@/lib/user-facing-error'
+import HoneypotFields, { emptyHoneypot } from '@/components/auth/HoneypotFields'
+import CaptchaWidget from '@/components/auth/CaptchaWidget'
+import { assertCaptchaReady, buildAuthProtectionPayload } from '@/lib/auth-protection'
+import SectionHeading from '@/sections/home/SectionHeading'
+
+const MESSAGE_MAX = 5000
+const EMPTY_FORM = { name: '', email: '', subject: '', message: '', consent: false }
 
 export default function ContactSection() {
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        message: '',
-        agree: false
-    })
+    const { settings } = useAppSettings()
+    const supportEmail = String(settings.support_email || '').trim()
+    const [form, setForm] = useState(EMPTY_FORM)
+    const [errors, setErrors] = useState({})
+    const [honeypot, setHoneypot] = useState(emptyHoneypot)
+    const [captcha, setCaptcha] = useState(null)
+    const [captchaKey, setCaptchaKey] = useState(0)
+    const [sending, setSending] = useState(false)
+    const [sent, setSent] = useState(false)
 
-    const handleChange = (e) => {
-        const { name, value, type, checked } = e.target
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value
-        }))
+    const update = (event) => {
+        const { name, value, type, checked } = event.target
+        setForm((current) => ({ ...current, [name]: type === 'checkbox' ? checked : value }))
+        if (errors[name]) setErrors((current) => ({ ...current, [name]: undefined }))
     }
 
-    const handleSubmit = (e) => {
-        e.preventDefault()
-        // Handle form submission here
-        console.log('Form submitted:', formData)
+    const validate = () => {
+        const next = {}
+        if (form.name.trim().length < 2) next.name = 'Please enter your name.'
+        if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) next.email = 'Please enter a valid email address.'
+        if (form.message.trim().length < 10) next.message = 'Please write at least 10 characters.'
+        if (!form.consent) next.consent = 'Please agree so we can reply to you.'
+        setErrors(next)
+        return Object.keys(next).length === 0
+    }
+
+    const submit = async (event) => {
+        event.preventDefault()
+        if (!validate()) return
+
+        const captchaError = assertCaptchaReady(captcha)
+        if (captchaError) {
+            toast.error(captchaError)
+            return
+        }
+
+        setSending(true)
+        try {
+            const res = await fetch('/backend/api/contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify({
+                    name: form.name.trim(),
+                    email: form.email.trim(),
+                    subject: form.subject.trim() || null,
+                    message: form.message.trim(),
+                    ...buildAuthProtectionPayload(honeypot, captcha),
+                }),
+            })
+            const data = await res.json().catch(() => null)
+            if (!res.ok) {
+                setCaptchaKey((key) => key + 1)
+                const fieldErrors = data?.context?.errors || data?.details?.errors || data?.errors
+                if (fieldErrors && typeof fieldErrors === 'object') {
+                    const mapped = {}
+                    Object.entries(fieldErrors).forEach(([field, messages]) => {
+                        mapped[field] = userFacingError(Array.isArray(messages) ? messages[0] : messages, 'Please check this field.')
+                    })
+                    setErrors(mapped)
+                }
+                if (res.status === 429) {
+                    throw new Error('You have sent several messages in a short time. Please wait a minute and try again.')
+                }
+                throw new Error(data?.detail || data?.message || 'We could not send your message. Please try again.')
+            }
+            setSent(true)
+            setForm(EMPTY_FORM)
+        } catch (err) {
+            toast.error(userFacingError(err?.message, 'We could not send your message. Please try again.'))
+        } finally {
+            setSending(false)
+        }
     }
 
     return (
-        <section id="contact" className="contact-section py-10 lg:py-[6vw] relative overflow-hidden">
-            <div className="wrapper relative z-10">
-                <div className="flex flex-col lg:flex-row items-start justify-between gap-8 lg:gap-[5vw]">
-                    {/* Left Side - Heading and Image */}
-                    <div className="lg:w-[45%]">
-                        <h2 data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="mb-6 lg:mb-[2vw]">
-                            <span>Not sure</span> if it’s right for you?
-                        </h2>
-                        <div data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="w-[90%]">
-                            <Image 
-                                src="/contact-image.svg" 
-                                alt="contact illustration" 
-                                width={400} 
-                                height={400}
-                                className="w-full h-auto object-contain"
+        <section className="nbl-section is-tinted" id="contact">
+            <div className="nbl-container nbl-contact">
+                <div className="nbl-contact-copy">
+                    <SectionHeading
+                        align="left"
+                        eyebrow="Contact"
+                        title="Questions before you start?"
+                        text="Ask about plans, group access for your program, or anything else. We read every message."
+                    />
+                    <ul className="nbl-contact-points">
+                        <li><MessageIcon className="h-4 w-4" />Replies go to the email you provide</li>
+                        {supportEmail && (
+                            <li>
+                                <MailIcon className="h-4 w-4" />
+                                Prefer email? <a href={`mailto:${supportEmail}`}>{supportEmail}</a>
+                            </li>
+                        )}
+                    </ul>
+                </div>
+
+                <div className="nbl-contact-card">
+                    {sent ? (
+                        <div className="nbl-contact-success" role="status">
+                            <CheckCircleIcon className="h-12 w-12" />
+                            <h3>Message sent</h3>
+                            <p>Thanks for reaching out — we will get back to you at the email you provided as soon as possible.</p>
+                            <button type="button" className="nbl-btn is-secondary is-sm" onClick={() => { setSent(false); setCaptchaKey((key) => key + 1) }}>
+                                Send another message
+                            </button>
+                        </div>
+                    ) : (
+                        <form onSubmit={submit} noValidate className="nbl-form">
+                            <HoneypotFields
+                                values={honeypot}
+                                onChange={(name, value) => setHoneypot((prev) => ({ ...prev, [name]: value }))}
                             />
-                        </div>
-                    </div>
+                            <div className="nbl-form-row">
+                                <label className="nbl-field">
+                                    <span className="nbl-label">Name</span>
+                                    <input name="name" value={form.name} onChange={update} maxLength={120} autoComplete="name" className={`nbl-input ${errors.name ? 'is-invalid' : ''}`} placeholder="Your name" aria-invalid={Boolean(errors.name)} />
+                                    {errors.name && <span className="nbl-error">{errors.name}</span>}
+                                </label>
+                                <label className="nbl-field">
+                                    <span className="nbl-label">Email</span>
+                                    <input name="email" type="email" value={form.email} onChange={update} maxLength={255} autoComplete="email" className={`nbl-input ${errors.email ? 'is-invalid' : ''}`} placeholder="you@example.com" aria-invalid={Boolean(errors.email)} />
+                                    {errors.email && <span className="nbl-error">{errors.email}</span>}
+                                </label>
+                            </div>
+                            <label className="nbl-field">
+                                <span className="nbl-label">Subject <em>(optional)</em></span>
+                                <input name="subject" value={form.subject} onChange={update} maxLength={160} className="nbl-input" placeholder="What is this about?" />
+                            </label>
+                            <label className="nbl-field">
+                                <span className="nbl-label-row">
+                                    <span className="nbl-label">Message</span>
+                                    <span className="nbl-counter">{form.message.length.toLocaleString()} / {MESSAGE_MAX.toLocaleString()}</span>
+                                </span>
+                                <textarea name="message" value={form.message} onChange={update} maxLength={MESSAGE_MAX} rows={5} className={`nbl-input nbl-textarea ${errors.message ? 'is-invalid' : ''}`} placeholder="How can we help?" aria-invalid={Boolean(errors.message)} />
+                                {errors.message && <span className="nbl-error">{errors.message}</span>}
+                            </label>
 
-                    {/* Right Side - Form */}
-                    <div data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="lg:w-[50%] w-full">
-                        <div className="bg-white rounded-2xl lg:rounded-[1.5vw] shadow-sm p-6 lg:p-[2vw]">
-                            <h6 className="font-bold mb-6 lg:mb-[2vw]">Send us a message</h6>
-                            
-                            <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-[1.5vw]">
-                                {/* Name Input */}
-                                <div>
-                                    <label htmlFor="name" className="block mb-2 font-medium text-[13px] lg:text-[0.8vw]">
-                                        Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="name"
-                                        name="name"
-                                        value={formData.name}
-                                        onChange={handleChange}
-                                        required
-                                        className="text-[12px] lg:text-[0.75vw] w-full px-4 lg:px-[1.2vw] py-3 lg:py-[0.8vw] border border-gray-300 rounded-lg lg:rounded-[0.8vw] focus:outline-none focus:ring-2 focus:ring-[#053447] focus:border-transparent transition-all"
-                                        placeholder="Your name"
-                                    />
-                                </div>
+                            <div className="nbl-captcha">
+                                <CaptchaWidget refreshKey={captchaKey} onChange={setCaptcha} />
+                            </div>
 
-                                {/* Email Input */}
-                                <div>
-                                    <label htmlFor="email" className="block mb-2 font-medium text-[13px] lg:text-[0.8vw]">
-                                        Email
-                                    </label>
-                                    <input
-                                        type="email"
-                                        id="email"
-                                        name="email"
-                                        value={formData.email}
-                                        onChange={handleChange}
-                                        required
-                                        className="text-[12px] lg:text-[0.75vw] w-full px-4 lg:px-[1.2vw] py-3 lg:py-[0.8vw] border border-gray-300 rounded-lg lg:rounded-[0.8vw] focus:outline-none focus:ring-2 focus:ring-[#053447] focus:border-transparent transition-all"
-                                        placeholder="your.email@example.com"
-                                    />
-                                </div>
+                            <label className="nbl-consent">
+                                <input type="checkbox" name="consent" checked={form.consent} onChange={update} />
+                                <span>
+                                    I agree that my details will be used to respond to my message, as described in the{' '}
+                                    <Link href="/privacy">Privacy Policy</Link>.
+                                </span>
+                            </label>
+                            {errors.consent && <span className="nbl-error">{errors.consent}</span>}
 
-                                {/* Message Textarea */}
-                                <div>
-                                    <label htmlFor="message" className="block mb-2 font-medium text-[13px] lg:text-[0.8vw]">
-                                        Message
-                                    </label>
-                                    <textarea
-                                        id="message"
-                                        name="message"
-                                        value={formData.message}
-                                        onChange={handleChange}
-                                        required
-                                        rows={5}
-                                        className="text-[12px] lg:text-[0.75vw] w-full px-4 lg:px-[1.2vw] py-3 lg:py-[0.8vw] border border-gray-300 rounded-lg lg:rounded-[0.8vw] focus:outline-none focus:ring-2 focus:ring-[#053447] focus:border-transparent transition-all resize-none"
-                                        placeholder="Your message here..."
-                                    />
-                                </div>
-
-                                {/* Checkbox */}
-                                <div className="flex items-start gap-2">
-                                    <input
-                                        type="checkbox"
-                                        id="agree"
-                                        name="agree"
-                                        checked={formData.agree}
-                                        onChange={handleChange}
-                                        required
-                                        className="mt-1 w-4 h-4 lg:w-[1vw] lg:h-[1vw] text-[#053447] border-gray-300 rounded focus:ring-[#053447] cursor-pointer"
-                                    />
-                                    <label htmlFor="agree" className="cursor-pointer text-[12px] lg:text-[0.75vw]">
-                                        I agree to the terms and conditions
-                                    </label>
-                                </div>
-
-                                {/* Submit Button */}
-                                <button
-                                    type="submit"
-                                    className="btn-primary w-full"
-                                >
-                                    Send Message
-                                </button>
-                            </form>
-                        </div>
-                    </div>
+                            <button type="submit" disabled={sending} className="nbl-btn is-primary is-block">
+                                {sending ? <LoaderIcon className="h-4 w-4 animate-spin" /> : <SendIcon className="h-4 w-4" />}
+                                {sending ? 'Sending…' : 'Send message'}
+                            </button>
+                        </form>
+                    )}
                 </div>
             </div>
         </section>
-    );
+    )
 }
-

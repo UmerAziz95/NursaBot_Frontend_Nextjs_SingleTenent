@@ -31,6 +31,12 @@ const TABS = [
 const emptySettings = {
     site_name: 'NursingAI',
     support_email: '',
+    site_tagline: '',
+    social_facebook_url: '',
+    social_instagram_url: '',
+    social_linkedin_url: '',
+    social_x_url: '',
+    social_youtube_url: '',
     maintenance_mode: false,
     maintenance_message: 'We are performing scheduled maintenance. Please try again soon.',
     user_signup_enabled: true,
@@ -299,6 +305,12 @@ export default function ManageSettingsPage() {
                 body: JSON.stringify({
                     site_name: settings.site_name,
                     support_email: settings.support_email ? settings.support_email : '',
+                    site_tagline: settings.site_tagline || '',
+                    social_facebook_url: settings.social_facebook_url || '',
+                    social_instagram_url: settings.social_instagram_url || '',
+                    social_linkedin_url: settings.social_linkedin_url || '',
+                    social_x_url: settings.social_x_url || '',
+                    social_youtube_url: settings.social_youtube_url || '',
                     maintenance_mode: !!settings.maintenance_mode,
                     maintenance_message: settings.maintenance_message,
                     user_signup_enabled: !!settings.user_signup_enabled,
@@ -616,7 +628,7 @@ export default function ManageSettingsPage() {
                                     maxLength={120}
                                 />
                             </Field>
-                            <Field label="Support email" hint="Optional contact used when help or support links need an address.">
+                            <Field label="Support email" hint="Shown in the website footer and receives contact-form messages (when email sending is configured).">
                                 <input
                                     type="email"
                                     className={inputClass}
@@ -625,6 +637,71 @@ export default function ManageSettingsPage() {
                                     placeholder="support@example.com"
                                 />
                             </Field>
+                            <Field label="Site tagline" hint="One sentence shown in the website footer and search previews.">
+                                <input
+                                    className={inputClass}
+                                    value={settings.site_tagline || ''}
+                                    onChange={(e) => patchSetting('site_tagline', e.target.value)}
+                                    maxLength={200}
+                                    placeholder="Your AI study companion for nursing school and the NCLEX."
+                                />
+                            </Field>
+                            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5">
+                                <p className="admin-section-title">Social links</p>
+                                <p className="admin-page-desc mb-3">Optional. Icons appear in the website footer only for links you fill in.</p>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                <Field label="Facebook">
+                                    <input
+                                        type="url"
+                                        className={inputClass}
+                                        value={settings.social_facebook_url || ''}
+                                        onChange={(e) => patchSetting('social_facebook_url', e.target.value)}
+                                        placeholder="https://"
+                                        maxLength={255}
+                                    />
+                                </Field>
+                                <Field label="Instagram">
+                                    <input
+                                        type="url"
+                                        className={inputClass}
+                                        value={settings.social_instagram_url || ''}
+                                        onChange={(e) => patchSetting('social_instagram_url', e.target.value)}
+                                        placeholder="https://"
+                                        maxLength={255}
+                                    />
+                                </Field>
+                                <Field label="LinkedIn">
+                                    <input
+                                        type="url"
+                                        className={inputClass}
+                                        value={settings.social_linkedin_url || ''}
+                                        onChange={(e) => patchSetting('social_linkedin_url', e.target.value)}
+                                        placeholder="https://"
+                                        maxLength={255}
+                                    />
+                                </Field>
+                                <Field label="X (Twitter)">
+                                    <input
+                                        type="url"
+                                        className={inputClass}
+                                        value={settings.social_x_url || ''}
+                                        onChange={(e) => patchSetting('social_x_url', e.target.value)}
+                                        placeholder="https://"
+                                        maxLength={255}
+                                    />
+                                </Field>
+                                <Field label="YouTube">
+                                    <input
+                                        type="url"
+                                        className={inputClass}
+                                        value={settings.social_youtube_url || ''}
+                                        onChange={(e) => patchSetting('social_youtube_url', e.target.value)}
+                                        placeholder="https://"
+                                        maxLength={255}
+                                    />
+                                </Field>
+                                </div>
+                            </div>
                             <Toggle
                                 checked={!!settings.maintenance_mode}
                                 onChange={(value) => patchSetting('maintenance_mode', value)}

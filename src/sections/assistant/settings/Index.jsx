@@ -8,19 +8,19 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog'
-import {
-    Tabs,
-    TabsList,
-    TabsTrigger,
-} from '@/components/ui/tabs'
+import { Tabs } from '@/components/ui/tabs'
 import {
     UserCircle as UserCircleIcon,
     CreditCard as CreditCardIcon,
     Gauge as GaugeIcon,
     LifeBuoy as LifebuoyIcon,
+    RotateCcw as RetryIcon,
+    TriangleAlert as AlertIcon,
     X as XIcon,
 } from 'lucide-react'
-import { SettingsProvider, useSettings } from '@/sections/assistant/settings/SettingsContext'
+import { SettingsProvider, initialsFrom, useSettings } from '@/sections/assistant/settings/SettingsContext'
+import { resolveDisplayName } from '@/sections/assistant/settings/displayName'
+import { SkeletonPage } from '@/sections/assistant/settings/SettingsUI'
 import ProfileTab from '@/sections/assistant/settings/ProfileTab'
 import PaymentTab from '@/sections/assistant/settings/PaymentTab'
 import AccountTab from '@/sections/assistant/settings/AccountTab'
@@ -29,10 +29,10 @@ import { fetchLaravel, getStoredAdminToken } from '@/lib/laravel-api'
 import { useAppSettings } from '@/lib/app-settings'
 
 const ALL_NAV = [
-    { value: 'profile', label: 'Profile', icon: UserCircleIcon },
-    { value: 'account', label: 'Plan & usage', icon: GaugeIcon, staffHidden: true },
-    { value: 'payment', label: 'Payment', icon: CreditCardIcon, staffHidden: true },
-    { value: 'help', label: 'Help', icon: LifebuoyIcon, staffHidden: true, feature: 'help_tickets_enabled' },
+    { value: 'profile', label: 'Profile', description: 'Name, workspace & password', icon: UserCircleIcon },
+    { value: 'account', label: 'Plan & usage', description: 'Subscription and tokens', icon: GaugeIcon, staffHidden: true },
+    { value: 'payment', label: 'Payment', description: 'Saved card', icon: CreditCardIcon, staffHidden: true },
+    { value: 'help', label: 'Help & support', description: 'Tickets with our team', icon: LifebuoyIcon, staffHidden: true, feature: 'help_tickets_enabled' },
 ]
 
 const STAFF_ROLES = new Set(['admin', 'super_admin', 'sub_admin'])
@@ -47,74 +47,105 @@ const readRole = () => {
     }
 }
 
-function SettingsBody({ onClose, helpUnread = 0, navItems }) {
-    const { loading, error, refresh } = useSettings()
+function SettingsBody({ onClose, helpUnread = 0, navItems, tab, onTabChange }) {
+    const { profile, loading, error, refresh } = useSettings()
     const profileOnly = navItems.length === 1 && navItems[0]?.value === 'profile'
+    const name = resolveDisplayName(profile?.display_name) || profile?.email || ''
+    const contentRef = useRef(null)
+
+    // Each tab starts at the top instead of inheriting the previous tab's scroll.
+    useEffect(() => {
+        contentRef.current?.scrollTo({ top: 0 })
+    }, [tab])
 
     return (
-        <div className="flex h-full min-h-0 w-full flex-col md:flex-row">
-            <aside className="flex shrink-0 flex-col border-b border-slate-200 bg-[#F7FAFC] px-4 py-4 md:w-[220px] md:border-b-0 md:border-r md:px-5 md:py-5">
-                <div className="mb-4 flex items-center justify-between gap-3 md:mb-6">
-                    <div>
-                        <p className="user-portal-kicker user-portal-kicker-accent">
-                            Settings
-                        </p>
-                        <p className="user-portal-section-title mt-0.5">
-                            {profileOnly ? 'Profile' : 'Your account'}
-                        </p>
-                    </div>
+        <div className="nbs-shell">
+            <aside className="nbs-nav">
+                <div className="nbs-nav-top">
+                    <div className="nbs-nav-kicker">Settings</div>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="inline-flex size-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+                        className="nbs-close nbs-close-nav"
                         aria-label="Close settings"
                     >
                         <XIcon className="size-4" />
                     </button>
                 </div>
 
+                <div className="nbs-nav-user">
+                    {profile ? (
+                        <>
+                            <span className="nbs-avatar">{initialsFrom(name, profile.email)}</span>
+                            <div className="min-w-0">
+                                <div className="nbs-nav-user-name">{name}</div>
+                                <div className="nbs-nav-user-email">{profile.email}</div>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <span className="nbs-skel size-10 rounded-full" />
+                            <div className="flex-1 space-y-1.5">
+                                <span className="nbs-skel h-3 w-24" />
+                                <span className="nbs-skel h-3 w-32" />
+                            </div>
+                        </>
+                    )}
+                </div>
+
                 {!profileOnly && (
-                    <TabsList
-                        variant="line"
-                        className="flex h-auto w-full flex-row gap-1 bg-transparent p-0 md:flex-col md:items-stretch"
-                    >
-                        {navItems.map(({ value, label, icon: Icon }) => (
-                            <TabsTrigger
-                                key={value}
-                                value={value}
-                                className="user-portal-settings-nav h-auto flex-none justify-start gap-2 rounded-lg border border-transparent px-3 py-2.5 text-slate-600 after:hidden data-[state=active]:!border-[#2EAADB]/20 data-[state=active]:!bg-white data-[state=active]:!font-semibold data-[state=active]:!text-[#053447] data-[state=active]:!shadow-sm"
-                            >
-                                <Icon className="size-4 shrink-0" />
-                                <span className="flex-1 text-left">{label}</span>
-                                {value === 'help' && helpUnread > 0 && (
-                                    <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#F97316] px-1.5 text-[10px] font-bold leading-5 text-white">
-                                        {helpUnread > 9 ? '9+' : helpUnread}
+                    <nav className="nbs-nav-list" aria-label="Settings sections">
+                        {navItems.map(({ value, label, description, icon: Icon }) => {
+                            const active = tab === value
+                            return (
+                                <button
+                                    key={value}
+                                    type="button"
+                                    onClick={() => onTabChange(value)}
+                                    className={`nbs-nav-item ${active ? 'is-active' : ''}`}
+                                    aria-current={active ? 'page' : undefined}
+                                >
+                                    <span className="nbs-nav-item-icon" aria-hidden="true">
+                                        <Icon className="size-4" />
                                     </span>
-                                )}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
+                                    <span className="min-w-0 flex-1 text-left">
+                                        <span className="nbs-nav-item-label">{label}</span>
+                                        <span className="nbs-nav-item-desc">{description}</span>
+                                    </span>
+                                    {value === 'help' && helpUnread > 0 && (
+                                        <span className="nbs-nav-badge">{helpUnread > 9 ? '9+' : helpUnread}</span>
+                                    )}
+                                </button>
+                            )
+                        })}
+                    </nav>
                 )}
             </aside>
 
-            <section className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-white">
+            <section ref={contentRef} className="nbs-content">
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="nbs-close nbs-close-floating"
+                    aria-label="Close settings"
+                    title="Close"
+                >
+                    <XIcon className="size-4" />
+                </button>
+
                 {loading ? (
-                    <div className="space-y-4 p-6 md:p-8">
-                        <div className="h-7 w-36 animate-pulse rounded-md bg-slate-100" />
-                        <div className="h-4 w-64 animate-pulse rounded-md bg-slate-100" />
-                        <div className="h-28 animate-pulse rounded-xl bg-slate-100" />
-                        <div className="h-44 animate-pulse rounded-xl bg-slate-100" />
-                    </div>
+                    <SkeletonPage />
                 ) : error ? (
-                    <div className="flex h-full flex-col items-start justify-center gap-4 p-6 md:p-8">
-                        <p className="user-portal-page-desc">Could not load settings.</p>
-                        <button
-                            type="button"
-                            onClick={() => void refresh()}
-                            className="user-portal-btn-primary"
-                        >
-                            Try again
-                        </button>
+                    <div className="nbs-page">
+                        <div className="nbs-empty">
+                            <span className="nbs-empty-icon is-warning"><AlertIcon className="size-5" /></span>
+                            <div className="nbs-empty-title">We couldn&apos;t load your settings</div>
+                            <div className="nbs-empty-desc">Check your connection and try again.</div>
+                            <button type="button" onClick={() => void refresh()} className="nbs-btn is-primary mt-4">
+                                <RetryIcon className="size-4" />
+                                Try again
+                            </button>
+                        </div>
                     </div>
                 ) : (
                     <>
@@ -242,7 +273,7 @@ export default function SettingDialog({ children }) {
 
             <DialogContent
                 showCloseButton={false}
-                className="user-portal fixed top-1/2 left-1/2 z-50 flex h-[min(760px,92vh)] w-[min(960px,96vw)] max-w-[960px] translate-x-[-50%] translate-y-[-50%] flex-col gap-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl sm:max-w-[960px]"
+                className="user-portal nbs-dialog fixed top-1/2 left-1/2 z-50 flex h-[min(760px,92vh)] w-[min(1000px,96vw)] max-w-[1000px] translate-x-[-50%] translate-y-[-50%] flex-col gap-0 overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-0 shadow-[0_30px_80px_-20px_rgba(5,52,71,0.45)] sm:max-w-[1000px]"
             >
                 <DialogTitle className="sr-only">Account settings</DialogTitle>
                 <DialogDescription className="sr-only">
@@ -262,6 +293,8 @@ export default function SettingDialog({ children }) {
                             onClose={() => setOpen(false)}
                             helpUnread={helpUnread}
                             navItems={navItems}
+                            tab={tab}
+                            onTabChange={setTab}
                         />
                     </SettingsProvider>
                 </Tabs>

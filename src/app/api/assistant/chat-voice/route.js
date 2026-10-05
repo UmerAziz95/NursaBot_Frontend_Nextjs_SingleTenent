@@ -32,6 +32,7 @@ export async function POST(request) {
         const chatId = incomingFormData.get("chat_id")
         const chatTitle = incomingFormData.get("chat_title")
         const promptEngineering = incomingFormData.get("prompt_engineering")
+        const answerMode = incomingFormData.get("answer_mode")
 
         if (businessClientId) outgoingFormData.append("business_client_id", String(businessClientId))
         if (workspaceId) outgoingFormData.append("workspace_id", String(workspaceId))
@@ -39,6 +40,7 @@ export async function POST(request) {
         if (chatId) outgoingFormData.append("chat_id", String(chatId))
         if (chatTitle) outgoingFormData.append("chat_title", String(chatTitle))
         if (promptEngineering) outgoingFormData.append("prompt_engineering", String(promptEngineering))
+        if (answerMode) outgoingFormData.append("answer_mode", String(answerMode))
 
         const normalizedMime = String(audioFile.type || "audio/webm")
             .toLowerCase()

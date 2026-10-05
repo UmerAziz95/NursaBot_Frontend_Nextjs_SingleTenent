@@ -1,3 +1,5 @@
+import { userFacingError } from '@/lib/user-facing-error'
+
 const DEFAULT_CHAT_ERROR = 'Sorry, I could not respond right now. Please try again in a moment.'
 const DEFAULT_VOICE_ERROR = 'Sorry, I could not process your voice note. Please try again.'
 const DEFAULT_LOAD_ERROR = 'Unable to load this conversation. Please try again.'
@@ -6,7 +8,7 @@ const CODE_MESSAGES = {
     subscription_expired: 'Your subscription has ended. Please reactivate your plan to continue chatting.',
     subscription_required: 'An active plan is required to use chat.',
     validation_error: 'Please check your message and try again.',
-    token_quota_exceeded: 'You have used all tokens for this billing period. Please reactivate or upgrade your plan.',
+    token_quota_exceeded: 'You have used all of your tokens. Buy extra tokens in Settings → Plan & usage, or upgrade your plan to keep chatting.',
     token_expired: 'Your session expired. Please sign in again.',
     token_invalid: 'Your session is invalid. Please sign in again.',
     token_missing: 'Please sign in to continue.',
@@ -50,7 +52,8 @@ export function friendlyAssistantError(message, { code, fallback = DEFAULT_CHAT_
         return fallback
     }
 
-    return text
+    // Shared filter: hides keys/config/internals and maps network failures.
+    return userFacingError(text, fallback)
 }
 
 export function friendlyChatError(message, options = {}) {

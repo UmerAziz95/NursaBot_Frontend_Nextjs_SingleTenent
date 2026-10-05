@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { userFacingError } from '@/lib/user-facing-error'
 
 export default function CreateAdminPage() {
     const [formData, setFormData] = useState({
@@ -69,9 +70,9 @@ export default function CreateAdminPage() {
                 return
             }
 
-            setError((data && (data.message || data.detail || data.error)) || 'Registration failed')
+            setError(userFacingError(data && (data.message || data.detail || data.error), 'Registration failed. Please try again.'))
         } catch (err) {
-            setError(err.message || 'Registration error')
+            setError(userFacingError(err.message, 'Registration failed. Please try again.'))
         } finally {
             setLoading(false)
         }

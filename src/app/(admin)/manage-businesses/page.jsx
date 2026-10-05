@@ -5,7 +5,7 @@ export default function ManageBusinessesRoute() {
     return (
         <AdminShell
             title="Businesses"
-            subtitle="List, create, update, and delete businesses and workspaces."
+            subtitle="Businesses and workspaces that power the assistant."
             contentClassName="bg-[#F4F7FA]"
         >
             <ManageBusinessesPage />

@@ -1,17 +1,38 @@
 'use client';
 
 import { useEffect, useState } from "react";
-import { User as UserIcon, LogOut as ArrowRightOnRectangleIcon, ShieldCheck as ShieldCheckIcon, Sparkles as SparklesIcon } from "lucide-react";
+import {
+    ChevronDown as ChevronDownIcon,
+    Gauge as GaugeIcon,
+    LifeBuoy as LifeBuoyIcon,
+    LogOut as LogOutIcon,
+    ShieldCheck as ShieldCheckIcon,
+    SquarePen as SquarePenIcon,
+    UserRound as UserRoundIcon,
+} from "lucide-react";
 
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
 import { logoutAndRedirect } from "@/lib/logout";
+import { useAppSettings } from "@/lib/app-settings";
 import HelpNotificationsBell from "@/components/HelpNotificationsBell";
+
+const openSettingsTab = (tab) => {
+    window.dispatchEvent(new CustomEvent('assistant-open-settings', { detail: { tab } }))
+}
+
+const startNewChat = () => {
+    const chatId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `chat-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    window.dispatchEvent(new CustomEvent('assistant-new-chat', { detail: { chat_id: chatId } }))
+}
 
 const readStoredJson = (key) => {
     try {
@@ -74,15 +95,32 @@ export default function ChatbotHeader() {
     const [currentUser, setCurrentUser] = useState(null)
     const [assistantBusy, setAssistantBusy] = useState(false)
     const [assistantStatus, setAssistantStatus] = useState('ready')
+    const [conversationTitle, setConversationTitle] = useState('')
 
     useEffect(() => {
         const handleActivity = (event) => {
             setAssistantBusy(Boolean(event?.detail?.busy))
             setAssistantStatus(String(event?.detail?.status || 'ready'))
         }
+        const handleOpenChat = (event) => {
+            setConversationTitle(String(event?.detail?.chat_title || '').trim())
+        }
+        const handleNewChat = () => setConversationTitle('')
+        const handleHeadersUpdated = (event) => {
+            const title = String(event?.detail?.chat_title || '').trim()
+            if (title) setConversationTitle(title)
+        }
 
         window.addEventListener('assistant-activity', handleActivity)
-        return () => window.removeEventListener('assistant-activity', handleActivity)
+        window.addEventListener('assistant-open-chat', handleOpenChat)
+        window.addEventListener('assistant-new-chat', handleNewChat)
+        window.addEventListener('assistant-chat-headers-updated', handleHeadersUpdated)
+        return () => {
+            window.removeEventListener('assistant-activity', handleActivity)
+            window.removeEventListener('assistant-open-chat', handleOpenChat)
+            window.removeEventListener('assistant-new-chat', handleNewChat)
+            window.removeEventListener('assistant-chat-headers-updated', handleHeadersUpdated)
+        }
     }, [])
 
     useEffect(() => {
@@ -135,108 +173,118 @@ export default function ChatbotHeader() {
         }
     }, [])
 
+    const { settings: appSettings } = useAppSettings()
     const isAdmin = ['admin', 'super_admin', 'sub_admin'].includes(currentUser?.role)
+    const initials = getInitials(currentUser?.displayName)
+    const roleLabel = currentUser?.role ? currentUser.role.replace('_', ' ') : ''
+    const statusLabel = assistantBusy
+        ? (assistantStatus === 'loading' ? 'Loading conversation' : 'Thinking')
+        : 'Ready'
 
     return (
         <div className="chatbot-header shrink-0 min-w-0">
-            <header className="user-portal-topbar relative min-w-0">
-                <div className="user-portal-topbar-start">
-                    <div className="user-portal-topbar-heading">
-                        <h1 className="user-portal-topbar-title">NursingAI</h1>
-                        <p className="user-portal-topbar-subtitle">
-                            Medical & nursing knowledge assistant
-                        </p>
+            <header className="nb-topbar">
+                <div className="nb-topbar-main">
+                    <h1 className="nb-topbar-title" title={conversationTitle || 'New conversation'}>
+                        {conversationTitle || 'New conversation'}
+                    </h1>
+                    <div className="nb-topbar-meta">
+                        <span className={`nb-status-chip ${assistantBusy ? 'is-busy' : ''}`} role="status">
+                            <span className="nb-status-chip-dot" aria-hidden="true" />
+                            {statusLabel}
+                            {assistantBusy && <span className="nb-status-chip-ellipsis" aria-hidden="true" />}
+                        </span>
+                        <span className="nb-topbar-tagline">Medical &amp; nursing knowledge assistant</span>
                     </div>
                 </div>
 
-                <div className="user-portal-topbar-actions">
+                <div className="nb-topbar-actions">
+                    <button
+                        type="button"
+                        className="nb-topbar-newchat"
+                        onClick={startNewChat}
+                        aria-label="New chat"
+                        title="New chat"
+                    >
+                        <SquarePenIcon className="h-4 w-4" />
+                        <span className="nb-topbar-newchat-label sr-only">New chat</span>
+                    </button>
+
                     {currentUser && !isAdmin && (
-                        <HelpNotificationsBell isAdmin={isAdmin} />
+                        <HelpNotificationsBell isAdmin={isAdmin} tone="light" />
                     )}
+
+                    <span className="nb-topbar-divider" aria-hidden="true" />
+
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button
                                 type="button"
-                                className={`user-portal-topbar-account ${assistantBusy ? 'is-busy' : ''}`}
+                                className="nb-topbar-account"
                                 aria-label="Open account menu"
                                 title={currentUser?.displayName || 'Account'}
                             >
-                                {assistantBusy && (
-                                    <span className="pointer-events-none absolute inset-0 overflow-hidden">
-                                        <span className="absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/25 to-transparent animate-[assistant-ticker_1.4s_linear_infinite]" />
-                                    </span>
-                                )}
-
-                                <span className="user-portal-topbar-account-avatar">
-                                    {getInitials(currentUser?.displayName)}
-                                    <span
-                                        className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-[#053447] ${
-                                            assistantBusy
-                                                ? 'bg-[#2EAADB] animate-pulse'
-                                                : 'bg-emerald-400'
-                                        }`}
-                                    />
+                                <span className="nb-topbar-avatar">
+                                    {initials}
+                                    <span className="nb-topbar-avatar-presence" aria-hidden="true" />
                                 </span>
-
-                                <span className="user-portal-topbar-account-text">
-                                    <span className="user-portal-topbar-account-label">Account</span>
-                                    <span className={`user-portal-topbar-account-name ${assistantBusy ? 'is-busy' : ''}`}>
-                                        {assistantBusy
-                                            ? (assistantStatus === 'loading' ? 'Loading chat…' : 'Assistant working…')
-                                            : (currentUser?.displayName || 'Signed in')}
-                                    </span>
+                                <span className="nb-topbar-account-text">
+                                    <span className="nb-topbar-account-name">{currentUser?.displayName || 'Account'}</span>
+                                    {roleLabel && <span className="nb-topbar-account-role">{roleLabel}</span>}
                                 </span>
-
-                                <SparklesIcon
-                                    className={`relative w-3.5 h-3.5 shrink-0 ${
-                                        assistantBusy ? 'text-[#9ad8ef] animate-pulse' : 'text-white/45'
-                                    }`}
-                                />
+                                <ChevronDownIcon className="nb-topbar-account-chevron h-4 w-4" />
                             </button>
                         </DropdownMenuTrigger>
 
                         <DropdownMenuContent
                             align="end"
+                            sideOffset={8}
                             collisionPadding={12}
-                            className="w-64 rounded-2xl border border-slate-200 bg-white p-0 text-slate-800 shadow-xl overflow-y-auto overscroll-contain"
+                            className="nb-account-menu w-72 rounded-2xl border border-slate-200/80 bg-white p-0 text-slate-800 shadow-[0_20px_50px_-12px_rgba(5,52,71,0.28)] overflow-hidden"
                         >
-                            <div className="border-b border-slate-100 bg-slate-50 px-4 py-3.5">
-                                <div className="flex items-center gap-3">
-                                    <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#2EAADB] to-[#053447] text-xs font-semibold text-white">
-                                        {getInitials(currentUser?.displayName)}
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        {currentUser?.role && (
-                                            <div className="inline-flex items-center gap-1 rounded-md bg-[#2EAADB]/10 px-1.5 py-0.5">
-                                                {isAdmin && <ShieldCheckIcon className="w-3 h-3 text-[#2EAADB] shrink-0" />}
-                                                <span className="user-portal-caption capitalize text-[#1f7fa8]!">
-                                                    {currentUser.role.replace('_', ' ')}
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
+                            <div className="nb-account-menu-head">
+                                <span className="nb-topbar-avatar is-lg">{initials}</span>
+                                <div className="min-w-0 flex-1">
+                                    <p className="nb-account-menu-name">{currentUser?.displayName || 'Account'}</p>
+                                    {currentUser?.email && currentUser.email !== currentUser.displayName && (
+                                        <p className="nb-account-menu-email">{currentUser.email}</p>
+                                    )}
+                                    {roleLabel && (
+                                        <span className="nb-account-menu-role">
+                                            {isAdmin && <ShieldCheckIcon className="h-3 w-3" />}
+                                            {roleLabel}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
-                            <div className="p-2">
-                                {isAdmin && (
-                                    <DropdownMenuItem
-                                        onClick={() => {
-                                            window.dispatchEvent(new CustomEvent('assistant-open-settings', {
-                                                detail: { tab: 'profile' },
-                                            }))
-                                        }}
-                                        className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-2 text-slate-700 focus:bg-slate-50"
-                                    >
-                                        <UserIcon className="w-4 h-4" />
-                                        Profile
+                            <div className="p-1.5">
+                                <DropdownMenuItem onClick={() => openSettingsTab('profile')} className="nb-account-menu-item">
+                                    <UserRoundIcon className="h-4 w-4" />
+                                    Profile
+                                </DropdownMenuItem>
+                                {!isAdmin && (
+                                    <DropdownMenuItem onClick={() => openSettingsTab('account')} className="nb-account-menu-item">
+                                        <GaugeIcon className="h-4 w-4" />
+                                        Plan &amp; usage
                                     </DropdownMenuItem>
                                 )}
+                                {!isAdmin && appSettings.help_tickets_enabled && (
+                                    <DropdownMenuItem onClick={() => openSettingsTab('help')} className="nb-account-menu-item">
+                                        <LifeBuoyIcon className="h-4 w-4" />
+                                        Help &amp; support
+                                    </DropdownMenuItem>
+                                )}
+                            </div>
+
+                            <DropdownMenuSeparator className="m-0 bg-slate-100" />
+
+                            <div className="p-1.5">
                                 <DropdownMenuItem
                                     onClick={() => logoutAndRedirect(isAdmin ? '/admin/signin' : '/signin')}
-                                    className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-2 text-red-600 cursor-pointer focus:text-red-600 focus:bg-red-50"
+                                    className="nb-account-menu-item is-danger"
                                 >
-                                    <ArrowRightOnRectangleIcon className="w-4 h-4" />
+                                    <LogOutIcon className="h-4 w-4" />
                                     Sign out
                                 </DropdownMenuItem>
                             </div>

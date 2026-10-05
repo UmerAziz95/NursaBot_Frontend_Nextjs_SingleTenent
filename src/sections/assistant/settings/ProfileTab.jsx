@@ -1,14 +1,65 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import {
+    Building2 as BuildingIcon,
+    Check as CheckIcon,
+    Eye as EyeIcon,
+    EyeOff as EyeOffIcon,
+    FolderOpen as FolderIcon,
+    KeyRound as KeyIcon,
+    Lock as LockIcon,
+    Mail as MailIcon,
+    UserRound as UserIcon,
+    X as XIcon,
+} from 'lucide-react'
 import { TabsContent } from '@/components/ui/tabs'
 import { initialsFrom, useSettings } from '@/sections/assistant/settings/SettingsContext'
 import { resolveDisplayName } from '@/sections/assistant/settings/displayName'
+import { Field, InfoTile, PageHeader, Section } from '@/sections/assistant/settings/SettingsUI'
 import { toast } from '@/lib/toast'
 
-const fieldClass = 'user-portal-input'
-const labelClass = 'user-portal-label'
-const panelClass = 'user-portal-panel'
+const NAME_MAX = 120
+
+// 0–4 score from length and character variety; only guides the user, the API enforces rules.
+const passwordStrength = (value) => {
+    if (!value) return { score: 0, label: '' }
+    let score = 0
+    if (value.length >= 8) score += 1
+    if (value.length >= 12) score += 1
+    if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1
+    if (/\d/.test(value) && /[^A-Za-z0-9]/.test(value)) score += 1
+    const labels = ['Too short', 'Weak', 'Fair', 'Good', 'Strong']
+    return { score, label: value.length < 8 ? labels[0] : labels[score] }
+}
+
+function PasswordInput({ id, value, onChange, autoComplete, minLength, placeholder }) {
+    const [visible, setVisible] = useState(false)
+    return (
+        <div className="nbs-input-wrap">
+            <input
+                id={id}
+                type={visible ? 'text' : 'password'}
+                value={value}
+                onChange={onChange}
+                className="nbs-input has-trailing"
+                required
+                minLength={minLength}
+                autoComplete={autoComplete}
+                placeholder={placeholder}
+            />
+            <button
+                type="button"
+                className="nbs-input-trailing"
+                onClick={() => setVisible((v) => !v)}
+                aria-label={visible ? 'Hide password' : 'Show password'}
+                title={visible ? 'Hide password' : 'Show password'}
+            >
+                {visible ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
+            </button>
+        </div>
+    )
+}
 
 export default function ProfileTab() {
     const { profile, updateProfile, changePassword } = useSettings()
@@ -29,6 +80,10 @@ export default function ProfileTab() {
     const visibleName = resolveDisplayName(profile.display_name)
     const initials = initialsFrom(visibleName || profile.email, profile.email)
     const roleLabel = String(profile.role || 'user').replaceAll('_', ' ')
+    const nameChanged = displayName.trim() !== (visibleName || '')
+    const strength = passwordStrength(password)
+    const confirmTouched = passwordConfirmation.length > 0
+    const passwordsMatch = confirmTouched && password === passwordConfirmation
 
     const onSaveProfile = async (e) => {
         e.preventDefault()
@@ -65,127 +120,145 @@ export default function ProfileTab() {
     }
 
     return (
-        <TabsContent value="profile" className="m-0 block w-full space-y-5 p-5 outline-none md:p-7">
-            <header className="border-b border-slate-100 pb-4">
-                <h2 className="user-portal-page-title">Profile</h2>
-                <p className="user-portal-page-desc mt-1">Manage how you appear in NursingAI.</p>
-            </header>
+        <TabsContent value="profile" className="nbs-page m-0 outline-none">
+            <PageHeader title="Profile" description="Manage how you appear in NursingAI and keep your account secure." />
 
-            <div className={`${panelClass} flex items-center gap-4`}>
-                <div className="flex size-16 shrink-0 items-center justify-center rounded-full bg-[#053447] text-xl font-bold text-white">
-                    {initials}
-                </div>
-                <div className="min-w-0 flex-1">
-                    <p className="user-portal-section-title truncate">{profile.email}</p>
-                    <span className="user-portal-badge mt-2 bg-slate-100 text-slate-600">
-                        {roleLabel}
-                    </span>
+            <div className="nbs-hero">
+                <div className="nbs-hero-banner" aria-hidden="true" />
+                <div className="nbs-hero-body">
+                    <span className="nbs-avatar is-xl">{initials}</span>
+                    <div className="min-w-0 flex-1 pb-1">
+                        <div className="nbs-hero-name">{visibleName || profile.email}</div>
+                        <div className="nbs-hero-email">{profile.email}</div>
+                    </div>
+                    <span className="nbs-pill is-brand capitalize">{roleLabel}</span>
                 </div>
             </div>
 
-            <form onSubmit={onSaveProfile} className={`${panelClass} space-y-4 bg-slate-50/50`}>
-                <h3 className="user-portal-section-title">Personal information</h3>
-                <label className="block">
-                    <span className={labelClass}>Display name</span>
-                    <input
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                        className={fieldClass}
-                        maxLength={120}
-                        placeholder="Add a display name"
+            <Section
+                as="form"
+                onSubmit={onSaveProfile}
+                icon={UserIcon}
+                title="Personal information"
+                description="Your display name is shown in the chat and in support tickets."
+            >
+                <div className="nbs-grid">
+                    <Field label="Display name" htmlFor="nbs-display-name" trailing={`${displayName.length}/${NAME_MAX}`}>
+                        <input
+                            id="nbs-display-name"
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                            className="nbs-input"
+                            maxLength={NAME_MAX}
+                            placeholder="Add a display name"
+                        />
+                    </Field>
+                    <Field label="Email address" htmlFor="nbs-email" hint="Contact support to change your email.">
+                        <div className="nbs-input-wrap">
+                            <MailIcon className="nbs-input-leading size-4" aria-hidden="true" />
+                            <input id="nbs-email" value={profile.email || ''} readOnly className="nbs-input has-leading is-readonly" />
+                            <LockIcon className="nbs-input-lock size-3.5" aria-hidden="true" />
+                        </div>
+                    </Field>
+                </div>
+                <div className="nbs-actions">
+                    {nameChanged && (
+                        <button
+                            type="button"
+                            className="nbs-btn is-ghost"
+                            onClick={() => setDisplayName(visibleName || '')}
+                            disabled={savingProfile}
+                        >
+                            Discard
+                        </button>
+                    )}
+                    <button type="submit" disabled={savingProfile || !nameChanged} className="nbs-btn is-primary">
+                        {savingProfile ? 'Saving…' : 'Save changes'}
+                    </button>
+                </div>
+            </Section>
+
+            <Section
+                icon={BuildingIcon}
+                title="Workspace"
+                description="Linked to your account. Answers are drawn from this workspace's documents."
+            >
+                <div className="nbs-grid">
+                    <InfoTile
+                        icon={BuildingIcon}
+                        label="Business"
+                        value={profile.business_name || profile.business_client_id || '—'}
                     />
-                </label>
-                <div className="grid gap-3 sm:grid-cols-2">
-                    <div>
-                        <span className={labelClass}>Email</span>
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-600">
-                            {profile.email}
-                        </div>
-                    </div>
-                    <div>
-                        <span className={labelClass}>Role</span>
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm capitalize text-slate-600">
-                            {roleLabel}
-                        </div>
-                    </div>
+                    <InfoTile
+                        icon={FolderIcon}
+                        label="Workspace"
+                        value={profile.workspace_name || profile.workspace_id || '—'}
+                    />
                 </div>
-                <button
-                    type="submit"
-                    disabled={savingProfile}
-                    className="user-portal-btn-primary"
-                >
-                    {savingProfile ? 'Saving…' : 'Save profile'}
-                </button>
-            </form>
+            </Section>
 
-            <div className={`${panelClass} space-y-3`}>
-                <h3 className="user-portal-section-title">Workspace assignment</h3>
-                <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-lg bg-slate-50 px-3.5 py-3">
-                        <span className="user-portal-kicker">Business</span>
-                        <p className="mt-1 truncate text-sm font-medium text-slate-800">
-                            {profile.business_name || profile.business_client_id || '—'}
-                        </p>
-                    </div>
-                    <div className="rounded-lg bg-slate-50 px-3.5 py-3">
-                        <span className="user-portal-kicker">Workspace</span>
-                        <p className="mt-1 truncate text-sm font-medium text-slate-800">
-                            {profile.workspace_name || profile.workspace_id || '—'}
-                        </p>
-                    </div>
-                </div>
-                <p className="user-portal-caption leading-relaxed">
-                    Business and workspace are assigned by your administrator and cannot be changed here.
-                </p>
-            </div>
-
-            <form onSubmit={onChangePassword} className={`${panelClass} space-y-4`}>
-                <h3 className="user-portal-section-title">Change password</h3>
-                <label className="block">
-                    <span className={labelClass}>Current password</span>
-                    <input
-                        type="password"
+            <Section
+                as="form"
+                onSubmit={onChangePassword}
+                icon={KeyIcon}
+                title="Password"
+                description="Use at least 8 characters. A mix of letters, numbers and symbols is strongest."
+            >
+                <Field label="Current password" htmlFor="nbs-current-password">
+                    <PasswordInput
+                        id="nbs-current-password"
                         value={currentPassword}
                         onChange={(e) => setCurrentPassword(e.target.value)}
-                        className={fieldClass}
-                        required
                         autoComplete="current-password"
                     />
-                </label>
-                <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="block">
-                        <span className={labelClass}>New password</span>
-                        <input
-                            type="password"
+                </Field>
+                <div className="nbs-grid">
+                    <Field
+                        label="New password"
+                        htmlFor="nbs-new-password"
+                        trailing={strength.label ? <span className={`nbs-strength-label is-${strength.score}`}>{strength.label}</span> : null}
+                    >
+                        <PasswordInput
+                            id="nbs-new-password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className={fieldClass}
-                            required
-                            minLength={8}
                             autoComplete="new-password"
+                            minLength={8}
                         />
-                    </label>
-                    <label className="block">
-                        <span className={labelClass}>Confirm new password</span>
-                        <input
-                            type="password"
+                        <div className="nbs-strength" aria-hidden="true">
+                            {[1, 2, 3, 4].map((step) => (
+                                <span key={step} className={password && strength.score >= step ? `is-on is-${strength.score}` : ''} />
+                            ))}
+                        </div>
+                    </Field>
+                    <Field
+                        label="Confirm new password"
+                        htmlFor="nbs-confirm-password"
+                        trailing={confirmTouched ? (
+                            passwordsMatch
+                                ? <span className="nbs-match is-ok"><CheckIcon className="size-3" /> Matches</span>
+                                : <span className="nbs-match is-bad"><XIcon className="size-3" /> Doesn&apos;t match</span>
+                        ) : null}
+                    >
+                        <PasswordInput
+                            id="nbs-confirm-password"
                             value={passwordConfirmation}
                             onChange={(e) => setPasswordConfirmation(e.target.value)}
-                            className={fieldClass}
-                            required
-                            minLength={8}
                             autoComplete="new-password"
+                            minLength={8}
                         />
-                    </label>
+                    </Field>
                 </div>
-                <button
-                    type="submit"
-                    disabled={savingPassword}
-                    className="user-portal-btn-dark"
-                >
-                    {savingPassword ? 'Updating…' : 'Update password'}
-                </button>
-            </form>
+                <div className="nbs-actions">
+                    <button
+                        type="submit"
+                        disabled={savingPassword || !currentPassword || !password || !passwordsMatch}
+                        className="nbs-btn is-dark"
+                    >
+                        {savingPassword ? 'Updating…' : 'Update password'}
+                    </button>
+                </div>
+            </Section>
         </TabsContent>
     )
 }

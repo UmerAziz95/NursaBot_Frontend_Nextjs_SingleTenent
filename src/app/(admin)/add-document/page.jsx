@@ -1,14 +1,14 @@
 import AdminShell from '@/sections/admin/AdminShell'
-import AddDocumentPage from '@/sections/register/AddDocumentPage'
+import ManageDocumentsPage from '@/sections/admin/ManageDocumentsPage'
 
-export default function AddDocumentRoute() {
+export default function DocumentsRoute() {
     return (
         <AdminShell
-            title="Add document"
-            subtitle="Upload a knowledge file into a workspace."
+            title="Documents"
+            subtitle="Upload knowledge files and track their processing."
             contentClassName="bg-[#F4F7FA]"
         >
-            <AddDocumentPage embedded />
+            <ManageDocumentsPage />
         </AdminShell>
     )
 }

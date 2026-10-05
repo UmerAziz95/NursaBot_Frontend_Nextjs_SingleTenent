@@ -1,15 +1,55 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react";
-import { Search as MagnifyingGlassIcon, LogOut as ArrowLeftOnRectangleIcon, Settings as Cog6ToothIcon, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, Plus as PlusIcon, Pencil as PencilIcon, Trash2 as TrashIcon, Check as CheckIcon, X as XIcon, MessageSquare as MessageSquareIcon } from "lucide-react";
+import { Search as MagnifyingGlassIcon, LogOut as ArrowLeftOnRectangleIcon, Settings as Cog6ToothIcon, PanelLeftClose as PanelLeftCloseIcon, PanelLeftOpen as PanelLeftOpenIcon, SquarePen as SquarePenIcon, Pencil as PencilIcon, Trash2 as TrashIcon, Check as CheckIcon, X as XIcon, MessagesSquare as MessagesSquareIcon } from "lucide-react";
 import SettingDialog from "@/sections/assistant/settings/Index";
+import BrandMark from "@/sections/assistant/BrandMark";
+import { useAppSettings } from "@/lib/app-settings";
 import { logoutAndRedirect } from "@/lib/logout";
 import { fetchLaravel } from "@/lib/laravel-api";
 import { friendlyChatError } from "@/lib/friendly-assistant-error";
 import { toast } from "@/lib/toast";
 // import SubscriptionDialog from "@/sections/assistant/settings/SubscriptionTab";
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Buckets chats into recency groups (Today, Yesterday, ...) by last activity.
+const groupChatsByRecency = (chats) => {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const today = startOfToday.getTime();
+
+    const groups = [
+        { label: 'Today', chats: [] },
+        { label: 'Yesterday', chats: [] },
+        { label: 'Previous 7 days', chats: [] },
+        { label: 'Previous 30 days', chats: [] },
+        { label: 'Older', chats: [] },
+    ];
+
+    chats.forEach((chat) => {
+        const stamp = new Date(chat?.updated_at || chat?.created_at || 0).getTime();
+        const at = Number.isNaN(stamp) ? 0 : stamp;
+        if (at >= today) groups[0].chats.push(chat);
+        else if (at >= today - DAY_MS) groups[1].chats.push(chat);
+        else if (at >= today - 7 * DAY_MS) groups[2].chats.push(chat);
+        else if (at >= today - 30 * DAY_MS) groups[3].chats.push(chat);
+        else groups[4].chats.push(chat);
+    });
+
+    return groups.filter((group) => group.chats.length > 0);
+};
+
+const isMobileViewport = () => typeof window !== 'undefined' && window.innerWidth < 768;
+
+// True when two chat lists would render identically (same chats, order and titles).
+const sameChatList = (a, b) => (
+    a.length === b.length
+    && a.every((chat, index) => chat.chat_id === b[index].chat_id && chat.title === b[index].title)
+);
+
 export default function Sidebar() {
+    const { settings: appSettings } = useAppSettings();
     const [isOpen, setIsOpen] = useState(true);
     const [chatHeaders, setChatHeaders] = useState([]);
     const [isLoadingChats, setIsLoadingChats] = useState(false);
@@ -31,7 +71,16 @@ export default function Sidebar() {
         } catch {
             setIsStaff(false)
         }
+        if (isMobileViewport()) {
+            setIsOpen(false)
+        }
     }, [])
+
+    const closeOnMobile = () => {
+        if (isMobileViewport()) {
+            setIsOpen(false)
+        }
+    }
 
     const generateChatId = () => {
         if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -61,6 +110,7 @@ export default function Sidebar() {
                 chat_title: chat.title || 'New chat',
             },
         }))
+        closeOnMobile()
     }
 
     const hideChatContextMenu = () => {
@@ -199,14 +249,20 @@ export default function Sidebar() {
 
     useEffect(() => {
         let cancelled = false
+        let latestRequest = 0
 
-        const fetchChatHeaders = async () => {
+        // `silent` refreshes (after each answer) update the list in place: no loading
+        // skeleton, and a failure keeps the current list instead of clearing it.
+        const fetchChatHeaders = async ({ silent = false } = {}) => {
             if (!readStoredJson('session')?.access_token && !localStorage.getItem('token')) {
                 setChatHeaders([])
                 return
             }
 
-            setIsLoadingChats(true)
+            const requestId = ++latestRequest
+            if (!silent) {
+                setIsLoadingChats(true)
+            }
 
             try {
                 const response = await fetchLaravel('/api/chat/headers/me')
@@ -219,20 +275,25 @@ export default function Sidebar() {
                 }
 
                 const data = await response.json()
-                if (cancelled) return
+                // Ignore responses that arrive after a newer request was started.
+                if (cancelled || requestId !== latestRequest) return
                 const chats = Array.isArray(data?.chats) ? data.chats : []
                 // Hide empty draft chats; only show saved conversations.
-                setChatHeaders(chats.filter((chat) => {
+                const visible = chats.filter((chat) => {
                     const title = String(chat?.title || '').trim().toLowerCase()
                     return title !== '' && title !== 'new chat' && title !== 'untitled chat'
-                }))
+                })
+                setChatHeaders((prev) => (sameChatList(prev, visible) ? prev : visible))
             } catch (error) {
-                if (cancelled) return
-                setChatHeaders([])
-                toast.error(error.message || 'Failed to load chats')
+                if (cancelled || requestId !== latestRequest) return
+                if (!silent) {
+                    setChatHeaders([])
+                    toast.error(error.message || 'Failed to load chats')
+                }
             } finally {
-                if (cancelled) return
-                setIsLoadingChats(false)
+                if (!cancelled && !silent && requestId === latestRequest) {
+                    setIsLoadingChats(false)
+                }
             }
         }
 
@@ -245,17 +306,23 @@ export default function Sidebar() {
             const nextChatTitle = String(event?.detail?.chat_title || '').trim()
             if (nextChatId && nextChatTitle && nextChatTitle.toLowerCase() !== 'new chat') {
                 setChatHeaders((prev) => {
+                    const existing = prev.find((chat) => chat.chat_id === nextChatId)
+                    // Already the newest chat with this title: leave the list untouched.
+                    if (existing && prev[0]?.chat_id === nextChatId && existing.title === nextChatTitle) {
+                        return prev
+                    }
                     const others = prev.filter((chat) => chat.chat_id !== nextChatId)
                     return [{
+                        ...existing,
                         chat_id: nextChatId,
                         title: nextChatTitle,
-                        user_id: '',
-                        created_at: new Date().toISOString(),
+                        user_id: existing?.user_id || '',
+                        created_at: existing?.created_at || new Date().toISOString(),
                         updated_at: new Date().toISOString(),
                     }, ...others]
                 })
             }
-            fetchChatHeaders()
+            fetchChatHeaders({ silent: true })
         }
 
         const handleOpenChatSync = (event) => {
@@ -301,6 +368,7 @@ export default function Sidebar() {
         window.dispatchEvent(new CustomEvent('assistant-new-chat', {
             detail: { chat_id: chatId },
         }))
+        closeOnMobile()
     }
 
     const handleLogout = async () => {
@@ -359,8 +427,15 @@ export default function Sidebar() {
 
     const sidebarToggleButtonClass = "user-portal-sidebar-icon-btn"
 
+    // The dialog is mounted once below and opened via this event, so it also
+    // works from the top bar menu while the sidebar is collapsed.
+    const openSettings = (tab = 'profile') => {
+        window.dispatchEvent(new CustomEvent('assistant-open-settings', { detail: { tab } }))
+    }
+
     return (
         <>
+            {isStaff ? null : <SettingDialog />}
             {isOpen && (
                 <div
                     className="fixed inset-0 bg-black/30 z-40 md:hidden"
@@ -371,27 +446,38 @@ export default function Sidebar() {
                 />
             )}
 
-            <div className={`h-full shrink-0 transition-[width] duration-300 ease-in-out overflow-hidden ${isOpen ? 'w-[248px]' : 'w-14'}`}>
+            <div className={`h-full shrink-0 transition-[width] duration-300 ease-in-out overflow-hidden ${isOpen ? 'w-[268px]' : 'w-14'}`}>
                 <aside className={`user-portal-sidebar h-full w-full flex flex-col overflow-hidden ${isOpen ? 'fixed inset-y-0 left-0 z-50 md:static md:z-auto' : ''}`}>
                     {isOpen ? (
                         <>
                         <div className="flex flex-col flex-1 min-h-0">
                             <div className="user-portal-sidebar-header">
+                                <BrandMark size="md" />
                                 <div className="min-w-0 flex-1">
-                                    <p className="user-portal-sidebar-brand">NursingAI</p>
-                                    <p className="user-portal-sidebar-subtitle">Your chats</p>
+                                    <p className="user-portal-sidebar-brand">{appSettings.site_name || 'NursingAI'}</p>
+                                    <p className="user-portal-sidebar-subtitle">Nursing study assistant</p>
                                 </div>
                                 <button
                                     type="button"
                                     aria-label="Collapse sidebar"
+                                    title="Collapse sidebar"
                                     onClick={() => setIsOpen(false)}
                                     className={sidebarToggleButtonClass}
                                 >
-                                    <ChevronLeftIcon className="w-4 h-4" />
+                                    <PanelLeftCloseIcon className="w-4 h-4" />
                                 </button>
                             </div>
 
                             <div className="shrink-0 px-3 pt-3 pb-2 space-y-2.5">
+                                <button
+                                    type="button"
+                                    onClick={handleNewChat}
+                                    className="user-portal-sidebar-btn"
+                                >
+                                    <SquarePenIcon className="w-4 h-4" />
+                                    New chat
+                                </button>
+
                                 <label className="user-portal-sidebar-search">
                                     <MagnifyingGlassIcon className="w-4 h-4 text-slate-400 shrink-0" />
                                     <input
@@ -413,37 +499,26 @@ export default function Sidebar() {
                                         </button>
                                     ) : null}
                                 </label>
-
-                                <button
-                                    type="button"
-                                    onClick={handleNewChat}
-                                    className="user-portal-sidebar-btn"
-                                >
-                                    <PlusIcon className="w-4 h-4" />
-                                    New chat
-                                </button>
                             </div>
 
                             <div className="flex-1 min-h-0 flex flex-col px-2 pb-2">
-                                <div className="flex items-center justify-between px-2 pb-1.5">
-                                    <p className="user-portal-sidebar-section-label">
-                                        {searchQuery.trim() ? 'Results' : 'Recent'}
-                                    </p>
-                                    {!isLoadingChats && (
-                                        <span className="user-portal-sidebar-count">
-                                            {searchQuery.trim() ? filteredChatHeaders.length : chatHeaders.length}
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="flex-1 min-h-0 overflow-y-auto">
+                                <div className="flex-1 min-h-0 overflow-y-auto nb-sidebar-scroll">
                                     {isLoadingChats && (
-                                        <p className="user-portal-caption px-2 py-3">Loading chats...</p>
+                                        <div className="space-y-1.5 px-2 py-2" role="status" aria-label="Loading chats">
+                                            {[78, 64, 86, 58, 70].map((width, index) => (
+                                                <span key={index} className="nb-sidebar-skeleton" style={{ width: `${width}%` }} />
+                                            ))}
+                                        </div>
                                     )}
 
                                     {!isLoadingChats && chatHeaders.length === 0 && (
-                                        <p className="user-portal-caption px-2 py-3">
-                                            No chats yet. Start a new conversation.
-                                        </p>
+                                        <div className="nb-sidebar-empty">
+                                            <span className="nb-sidebar-empty-icon">
+                                                <MessagesSquareIcon className="w-4 h-4" />
+                                            </span>
+                                            <p className="nb-sidebar-empty-title">No conversations yet</p>
+                                            <p className="user-portal-caption">Your chats will appear here.</p>
+                                        </div>
                                     )}
 
                                     {!isLoadingChats && chatHeaders.length > 0 && filteredChatHeaders.length === 0 && (
@@ -453,8 +528,14 @@ export default function Sidebar() {
                                     )}
 
                                     {!isLoadingChats && filteredChatHeaders.length > 0 && (
+                                        (searchQuery.trim()
+                                            ? [{ label: `Results · ${filteredChatHeaders.length}`, chats: filteredChatHeaders }]
+                                            : groupChatsByRecency(filteredChatHeaders)
+                                        ).map((group) => (
+                                        <div key={group.label} className="nb-sidebar-group">
+                                        <p className="user-portal-sidebar-section-label px-2 pb-1">{group.label}</p>
                                         <ul className="w-full space-y-0.5">
-                                            {filteredChatHeaders.map((chat) => {
+                                            {group.chats.map((chat) => {
                                                 const title = getChatTitle(chat)
                                                 const isActive = activeChatId === chat.chat_id
 
@@ -509,7 +590,6 @@ export default function Sidebar() {
                                                                     onContextMenu={(event) => showChatContextMenu(chat, event)}
                                                                     onDoubleClick={() => startRenameChat(chat)}
                                                                 >
-                                                                    <MessageSquareIcon className="w-3.5 h-3.5 shrink-0 opacity-60" />
                                                                     <span className="min-w-0 truncate">{renderChatTitle(title)}</span>
                                                                 </button>
                                                                 <div className="flex items-center pr-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition">
@@ -552,6 +632,8 @@ export default function Sidebar() {
                                                 )
                                             })}
                                         </ul>
+                                        </div>
+                                        ))
                                     )}
                                 </div>
                             </div>
@@ -563,15 +645,14 @@ export default function Sidebar() {
                                     Account
                                 </p>
 
-                                <SettingDialog>
-                                    <button
-                                        type="button"
-                                        className="user-portal-sidebar-footer-link"
-                                    >
-                                        <Cog6ToothIcon className="w-4 h-4 shrink-0" />
-                                        Settings
-                                    </button>
-                                </SettingDialog>
+                                <button
+                                    type="button"
+                                    onClick={() => openSettings()}
+                                    className="user-portal-sidebar-footer-link"
+                                >
+                                    <Cog6ToothIcon className="w-4 h-4 shrink-0" />
+                                    Settings
+                                </button>
 
                                 <button
                                     type="button"
@@ -586,14 +667,16 @@ export default function Sidebar() {
                         )}
                         </>
                     ) : (
-                        <div className="flex h-full flex-col items-center gap-2 py-3 px-1.5">
+                        <div className="flex h-full flex-col items-center gap-1.5 py-3 px-1.5">
+                            <BrandMark size="sm" className="mb-2" />
                             <button
                                 type="button"
                                 aria-label="Expand sidebar"
+                                title="Expand sidebar"
                                 onClick={() => setIsOpen(true)}
                                 className={sidebarToggleButtonClass}
                             >
-                                <ChevronRightIcon className="w-4 h-4" />
+                                <PanelLeftOpenIcon className="w-4 h-4" />
                             </button>
                             <button
                                 type="button"
@@ -602,8 +685,28 @@ export default function Sidebar() {
                                 onClick={handleNewChat}
                                 className={sidebarToggleButtonClass}
                             >
-                                <PlusIcon className="w-4 h-4" />
+                                <SquarePenIcon className="w-4 h-4" />
                             </button>
+                            <button
+                                type="button"
+                                aria-label="Search chats"
+                                title="Search chats"
+                                onClick={() => setIsOpen(true)}
+                                className={sidebarToggleButtonClass}
+                            >
+                                <MagnifyingGlassIcon className="w-4 h-4" />
+                            </button>
+                            {isStaff ? null : (
+                                <button
+                                    type="button"
+                                    aria-label="Settings"
+                                    title="Settings"
+                                    onClick={() => openSettings()}
+                                    className={`${sidebarToggleButtonClass} mt-auto`}
+                                >
+                                    <Cog6ToothIcon className="w-4 h-4" />
+                                </button>
+                            )}
                         </div>
                     )}
                 </aside>

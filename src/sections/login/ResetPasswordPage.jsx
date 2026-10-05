@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from '@/lib/toast'
 import HoneypotFields, { emptyHoneypot } from '@/components/auth/HoneypotFields'
 import CaptchaWidget from '@/components/auth/CaptchaWidget'
 import { assertCaptchaReady, buildAuthProtectionPayload } from '@/lib/auth-protection'
+import { KeyRound as KeyIcon, Link2Off as LinkIcon, Loader2 as LoaderIcon, Lock as LockIcon, Mail as MailIcon } from 'lucide-react'
+import AuthLayout, { AuthField, PasswordInput } from '@/sections/auth/AuthLayout'
 
 export default function ResetPasswordPage() {
     const router = useRouter()
@@ -97,123 +98,73 @@ export default function ResetPasswordPage() {
     }
 
     return (
-        <div className="login-section flex min-h-screen items-center px-4 py-10 lg:py-[3.6vw]">
-            <div className="wrapper w-full">
-                <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-[4vw]">
-                    <div className="order-2 w-full lg:order-1">
-                        <div className="login-form rounded-2xl p-6 shadow-2xl lg:rounded-[1.5vw] lg:p-[2vw]">
-                            <div className="mb-6 lg:mb-[2vw]">
-                                <h3 className="mb-2 text-[16px] font-bold lg:mb-[0.5vw] lg:text-[2vw]">
-                                    Reset password
-                                </h3>
-                                <p className="text-[13px] text-gray-600 lg:text-[0.9vw]">
-                                    Choose a new password for your account.
-                                </p>
-                            </div>
-
-                            {!tokenFromQuery ? (
-                                <div className="space-y-4">
-                                    <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] text-amber-900 lg:text-[0.75vw]">
-                                        This reset link is invalid or incomplete. Request a new one from the forgot password page.
-                                    </p>
-                                    <Link
-                                        href="/forgot-password"
-                                        className="btn-primary block min-w-full! py-3 text-center font-bold lg:py-[0.9vw]"
-                                    >
-                                        Request reset link
-                                    </Link>
-                                </div>
-                            ) : (
-                                <form onSubmit={handleSubmit} className="relative space-y-4 lg:space-y-[1.5vw]" autoComplete="on">
-                                    <HoneypotFields
-                                        values={honeypot}
-                                        onChange={(name, value) => setHoneypot((prev) => ({ ...prev, [name]: value }))}
-                                    />
-
-                                    <div>
-                                        <label htmlFor="email" className="mb-2 block text-[13px] font-medium lg:text-[0.8vw]">
-                                            Email Address
-                                        </label>
-                                        <input
-                                            type="email"
-                                            id="email"
-                                            name="email"
-                                            value={formData.email}
-                                            onChange={handleChange}
-                                            required
-                                            className="w-full rounded-lg border border-gray-400 px-4 py-3 text-[12px] transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#053447] lg:rounded-[0.8vw] lg:px-[1.2vw] lg:py-[0.8vw] lg:text-[0.75vw]"
-                                            placeholder="your.email@example.com"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label htmlFor="password" className="mb-2 block text-[13px] font-medium lg:text-[0.8vw]">
-                                            New password
-                                        </label>
-                                        <input
-                                            type="password"
-                                            id="password"
-                                            name="password"
-                                            value={formData.password}
-                                            onChange={handleChange}
-                                            required
-                                            minLength={8}
-                                            className="w-full rounded-lg border border-gray-400 px-4 py-3 text-[12px] transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#053447] lg:rounded-[0.8vw] lg:px-[1.2vw] lg:py-[0.8vw] lg:text-[0.75vw]"
-                                            placeholder="At least 8 characters"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label htmlFor="password_confirmation" className="mb-2 block text-[13px] font-medium lg:text-[0.8vw]">
-                                            Confirm password
-                                        </label>
-                                        <input
-                                            type="password"
-                                            id="password_confirmation"
-                                            name="password_confirmation"
-                                            value={formData.password_confirmation}
-                                            onChange={handleChange}
-                                            required
-                                            minLength={8}
-                                            className="w-full rounded-lg border border-gray-400 px-4 py-3 text-[12px] transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#053447] lg:rounded-[0.8vw] lg:px-[1.2vw] lg:py-[0.8vw] lg:text-[0.75vw]"
-                                            placeholder="Repeat your new password"
-                                        />
-                                    </div>
-
-                                    <CaptchaWidget refreshKey={captchaKey} onChange={setCaptcha} />
-
-                                    <button
-                                        type="submit"
-                                        disabled={loading}
-                                        className="btn-primary block min-w-full! py-3 text-center font-bold lg:py-[0.9vw]"
-                                    >
-                                        {loading ? 'Updating…' : 'Update password'}
-                                    </button>
-
-                                    <div className="text-center text-[12px] text-gray-600 lg:text-[0.75vw]">
-                                        <Link href="/signin" className="font-medium text-[#053447] hover:text-[#2EAADB]">
-                                            Back to sign in
-                                        </Link>
-                                    </div>
-                                </form>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="order-1 flex w-full items-center justify-center lg:order-2">
-                        <div className="relative w-full max-w-lg lg:max-w-none">
-                            <Image
-                                src="/contact-image.svg"
-                                alt="Reset password illustration"
-                                width={600}
-                                height={600}
-                                className="h-auto w-full object-contain"
-                                priority
-                            />
-                        </div>
-                    </div>
+        <AuthLayout
+            title={tokenFromQuery ? 'Choose a new password' : 'Link not valid'}
+            subtitle={tokenFromQuery
+                ? 'Pick a strong password you haven’t used before.'
+                : 'This reset link is invalid or incomplete. Request a new one and use the latest email we send you.'}
+            footer={<><Link href="/signin">Back to sign in</Link></>}
+        >
+            {!tokenFromQuery ? (
+                <div className="nbu-state">
+                    <span className="nbu-state-icon"><LinkIcon className="h-5 w-5" /></span>
+                    <Link href="/forgot-password" className="nbu-submit">Request a new link</Link>
                 </div>
-            </div>
-        </div>
+            ) : (
+                <form onSubmit={handleSubmit} className="nbu-form" autoComplete="on">
+                    <HoneypotFields
+                        values={honeypot}
+                        onChange={(name, value) => setHoneypot((prev) => ({ ...prev, [name]: value }))}
+                    />
+
+                    <AuthField label="Email address" htmlFor="email" icon={MailIcon}>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            required
+                            autoComplete="username"
+                            className="nbu-input"
+                            placeholder="you@example.com"
+                        />
+                    </AuthField>
+
+                    <AuthField label="New password" htmlFor="password" icon={LockIcon} hint="At least 8 characters.">
+                        <PasswordInput
+                            id="password"
+                            name="password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            minLength={8}
+                            autoComplete="new-password"
+                            placeholder="At least 8 characters"
+                        />
+                    </AuthField>
+
+                    <AuthField label="Confirm new password" htmlFor="password_confirmation" icon={LockIcon}>
+                        <PasswordInput
+                            id="password_confirmation"
+                            name="password_confirmation"
+                            value={formData.password_confirmation}
+                            onChange={handleChange}
+                            minLength={8}
+                            autoComplete="new-password"
+                            placeholder="Repeat your new password"
+                        />
+                    </AuthField>
+
+                    <div className="nbu-captcha">
+                        <CaptchaWidget refreshKey={captchaKey} onChange={setCaptcha} />
+                    </div>
+
+                    <button type="submit" disabled={loading} className="nbu-submit">
+                        {loading ? <LoaderIcon className="h-4 w-4 animate-spin" /> : <KeyIcon className="h-4 w-4" />}
+                        {loading ? 'Updating…' : 'Update password'}
+                    </button>
+                </form>
+            )}
+        </AuthLayout>
     )
 }

@@ -1,9 +1,12 @@
 import { toast as sonnerToast } from 'sonner'
+import { userFacingError } from '@/lib/user-facing-error'
 
 const DEFAULT_DURATION = 4500
 
 /**
  * App-wide toast helpers. Prefer these over inline error/success banners.
+ * Error and warning text is filtered so implementation details from the
+ * server (API keys, config, "not found" internals) never reach the screen.
  */
 export const toast = {
     success(message, options = {}) {
@@ -15,14 +18,14 @@ export const toast = {
     },
     error(message, options = {}) {
         if (!message) return
-        return sonnerToast.error(String(message), {
+        return sonnerToast.error(userFacingError(message), {
             duration: 5500,
             ...options,
         })
     },
     warning(message, options = {}) {
         if (!message) return
-        return sonnerToast.warning(String(message), {
+        return sonnerToast.warning(userFacingError(message), {
             duration: DEFAULT_DURATION,
             ...options,
         })

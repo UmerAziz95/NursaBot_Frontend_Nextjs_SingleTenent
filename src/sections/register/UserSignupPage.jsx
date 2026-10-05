@@ -1,37 +1,79 @@
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import {
+  Check as CheckIcon,
+  Loader2 as LoaderIcon,
+  Lock as LockIcon,
+  Mail as MailIcon,
+  UserPlus as UserPlusIcon,
+  UserRound as UserIcon,
+  Wrench as WrenchIcon,
+  X as XIcon,
+} from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { persistAuthSession } from '@/lib/auth-session'
 import HoneypotFields, { emptyHoneypot } from '@/components/auth/HoneypotFields'
 import CaptchaWidget from '@/components/auth/CaptchaWidget'
 import { assertCaptchaReady, buildAuthProtectionPayload } from '@/lib/auth-protection'
 import { useAppSettings } from '@/lib/app-settings'
+import AuthLayout, { AuthField, PasswordInput } from '@/sections/auth/AuthLayout'
+
+// Google sign-in isn't wired up yet; flip to true once it is.
+const SHOW_GOOGLE_SIGNIN = false
+
+// Matches the backend rule (min 6); the meter nudges toward stronger passwords.
+const PASSWORD_MIN = 6
+
+const passwordStrength = (value) => {
+  if (!value) return { score: 0, label: '' }
+  if (value.length < PASSWORD_MIN) return { score: 0, label: 'Too short' }
+  let score = 1
+  if (value.length >= 10) score += 1
+  if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1
+  if (/\d/.test(value) && /[^A-Za-z0-9]/.test(value)) score += 1
+  return { score, label: ['Too short', 'Weak', 'Fair', 'Good', 'Strong'][score] }
+}
 
 export default function UserSignupPage() {
   const [formData, setFormData] = useState({ username: '', email: '', password: '', confirmPassword: '' })
+  const [agreed, setAgreed] = useState(false)
+  const [errors, setErrors] = useState({})
   const [honeypot, setHoneypot] = useState(emptyHoneypot)
   const [captcha, setCaptcha] = useState(null)
   const [captchaKey, setCaptchaKey] = useState(0)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const { settings, loading: settingsLoading } = useAppSettings()
+  const siteName = settings.site_name || 'NursingAI'
+
+  const strength = passwordStrength(formData.password)
+  const confirmTouched = formData.confirmPassword.length > 0
+  const passwordsMatch = confirmTouched && formData.password === formData.confirmPassword
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }))
+  }
+
+  const validate = () => {
+    const next = {}
+    if (formData.username.trim().length < 2) next.username = 'Please enter your name.'
+    if (!/^\S+@\S+\.\S+$/.test(formData.email.trim())) next.email = 'Please enter a valid email address.'
+    if (formData.password.length < PASSWORD_MIN) next.password = `Use at least ${PASSWORD_MIN} characters.`
+    if (formData.password !== formData.confirmPassword) next.confirmPassword = 'Passwords do not match.'
+    if (!agreed) next.agreed = 'Please accept the Terms and Privacy Policy to continue.'
+    setErrors(next)
+    return Object.keys(next).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match.')
-      return
-    }
+    if (!validate()) return
 
     const captchaError = assertCaptchaReady(captcha)
     if (captchaError) {
@@ -143,112 +185,153 @@ export default function UserSignupPage() {
 
   if (settingsLoading) {
     return (
-      <div className="login-section min-h-screen flex items-center justify-center px-4 text-sm text-slate-500">
-        Loading…
-      </div>
+      <AuthLayout title="Create your account" subtitle="Loading…">
+        <div className="space-y-3 pt-2">
+          <span className="nbu-skel h-11 w-full" />
+          <span className="nbu-skel h-11 w-full" />
+          <span className="nbu-skel h-11 w-full" />
+        </div>
+      </AuthLayout>
     )
   }
 
   if (settings.maintenance_mode || !settings.user_signup_enabled) {
     return (
-      <div className="login-section min-h-screen flex items-center py-10 lg:py-[3.6vw] px-4">
-        <div className="wrapper w-full max-w-lg mx-auto">
-          <div className="login-form rounded-2xl shadow-2xl p-6 lg:p-8 text-center">
-            <h3 className="mb-2 text-[16px] lg:text-xl font-bold">
-              {settings.maintenance_mode ? 'Maintenance in progress' : 'Registration closed'}
-            </h3>
-            <p className="text-gray-600 text-sm">
-              {settings.maintenance_mode
-                ? (settings.maintenance_message || 'Please try again soon.')
-                : 'New user registration is currently disabled. Please sign in if you already have an account.'}
-            </p>
-            <Link href="/signin" className="mt-5 inline-flex h-9 items-center justify-center rounded-full bg-[#053447] px-4 text-sm font-semibold text-white">
-              Sign in
-            </Link>
-          </div>
+      <AuthLayout
+        title={settings.maintenance_mode ? 'We’ll be right back' : 'Sign-ups are closed'}
+        subtitle={settings.maintenance_mode
+          ? (settings.maintenance_message || 'We are performing scheduled maintenance. Please try again soon.')
+          : 'New accounts are not being created right now. If you already have an account, you can sign in.'}
+      >
+        <div className="nbu-state">
+          <span className="nbu-state-icon"><WrenchIcon className="h-5 w-5" /></span>
+          <Link href="/signin" className="nbu-submit">Go to sign in</Link>
         </div>
-      </div>
+      </AuthLayout>
     )
   }
 
   return (
-    <div className="login-section min-h-screen flex items-center py-10 lg:py-[3.6vw] px-4">
-      <div className="wrapper w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-[4vw] items-center">
-          <div className="w-full order-2 lg:order-1">
-            <div className="login-form rounded-2xl lg:rounded-[1.5vw] shadow-2xl p-6 lg:p-[2vw]">
-              <div className="mb-6 lg:mb-[2vw]">
-                <Link href="/" className="mb-3 inline-block text-[12px] text-[#053447] hover:text-[#2EAADB] lg:mb-[0.8vw] lg:text-[0.75vw]">
-                  ← Back to home
-                </Link>
-                <h3 className="mb-2 lg:mb-[0.5vw] text-[16px] lg:text-[2vw] font-bold">Create Account</h3>
-                <p className="text-gray-600 text-[13px] lg:text-[0.9vw]">Create your site-user account to get started</p>
-              </div>
+    <AuthLayout
+      title="Create your account"
+      subtitle={`Join ${siteName} and start studying in minutes.`}
+      footer={<>Already have an account? <Link href="/signin">Sign in</Link></>}
+    >
+      <form onSubmit={handleSubmit} className="nbu-form" autoComplete="on" noValidate>
+        <HoneypotFields
+          values={honeypot}
+          onChange={(name, value) => setHoneypot((prev) => ({ ...prev, [name]: value }))}
+        />
 
-              <form onSubmit={handleSubmit} className="relative space-y-4 lg:space-y-[1.5vw]" autoComplete="on">
-                <HoneypotFields
-                  values={honeypot}
-                  onChange={(name, value) => setHoneypot((prev) => ({ ...prev, [name]: value }))}
-                />
+        <AuthField label="Full name" htmlFor="username" icon={UserIcon} error={errors.username}>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            value={formData.username}
+            onChange={handleChange}
+            required
+            maxLength={120}
+            autoComplete="name"
+            className="nbu-input"
+            placeholder="Your name"
+          />
+        </AuthField>
 
-                <div>
-                  <label htmlFor="username" className="block mb-2 font-medium text-[13px] lg:text-[0.8vw]">Username</label>
-                  <input type="text" id="username" name="username" value={formData.username} onChange={handleChange} required className="text-[12px] lg:text-[0.75vw] w-full px-4 lg:px-[1.2vw] py-3 lg:py-[0.8vw] border border-gray-400 rounded-lg lg:rounded-[0.8vw] focus:outline-none focus:ring-2 focus:ring-[#053447] focus:border-transparent transition-all" placeholder="Your name" />
-                </div>
+        <AuthField label="Email address" htmlFor="email" icon={MailIcon} error={errors.email}>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            autoComplete="email"
+            className="nbu-input"
+            placeholder="you@example.com"
+          />
+        </AuthField>
 
-                <div>
-                  <label htmlFor="email" className="block mb-2 font-medium text-[13px] lg:text-[0.8vw]">Email Address</label>
-                  <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} required className="text-[12px] lg:text-[0.75vw] w-full px-4 lg:px-[1.2vw] py-3 lg:py-[0.8vw] border border-gray-400 rounded-lg lg:rounded-[0.8vw] focus:outline-none focus:ring-2 focus:ring-[#053447] focus:border-transparent transition-all" placeholder="your.email@example.com" />
-                </div>
-
-                <div>
-                  <label htmlFor="password" className="block mb-2 font-medium text-[13px] lg:text-[0.8vw]">Password</label>
-                  <input type="password" id="password" name="password" value={formData.password} onChange={handleChange} required className="text-[12px] lg:text-[0.75vw] w-full px-4 lg:px-[1.2vw] py-3 lg:py-[0.8vw] border border-gray-400 rounded-lg lg:rounded-[0.8vw] focus:outline-none focus:ring-2 focus:ring-[#053447] focus:border-transparent transition-all" placeholder="Enter your password" />
-                </div>
-
-                <div>
-                  <label htmlFor="confirmPassword" className="block mb-2 font-medium text-[13px] lg:text-[0.8vw]">Confirm Password</label>
-                  <input type="password" id="confirmPassword" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} required className="text-[12px] lg:text-[0.75vw] w-full px-4 lg:px-[1.2vw] py-3 lg:py-[0.8vw] border border-gray-400 rounded-lg lg:rounded-[0.8vw] focus:outline-none focus:ring-2 focus:ring-[#053447] focus:border-transparent transition-all" placeholder="Repeat your password" />
-                </div>
-
-                <CaptchaWidget refreshKey={captchaKey} onChange={setCaptcha} />
-
-                <div className="w-full">
-                  <button type="submit" disabled={loading} className="btn-primary min-w-full! block py-3 lg:py-[0.9vw] text-center font-bold">{loading ? 'Creating account…' : 'Sign Up'}</button>
-                </div>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-400" />
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 text-gray-500 backdrop-blur-sm text-[12px] lg:text-[0.75vw]">
-                      Or continue with
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-center gap-2 px-4 lg:px-[1.5vw] py-3 lg:py-[0.8vw] border border-gray-400 rounded-lg lg:rounded-[0.8vw] hover:bg-gray-50 transition-colors"
-                >
-                  <img src="/google.svg" alt="Google" className="w-5 h-5 lg:w-[1.2vw] lg:h-[1.2vw]" />
-                  <span className="text-[12px] lg:text-[0.75vw] font-medium">Continue with Google</span>
-                </button>
-
-                <div className="text-center text-[12px] lg:text-[0.75vw] text-gray-600">Already have a user account?{' '}<Link href="/signin" className="text-[#053447] hover:text-[#2EAADB] transition-colors font-medium">Sign in</Link></div>
-                <div className="text-center text-[11px] text-gray-500">Administrator? <Link href="/admin/signin" className="font-medium text-[#053447] hover:text-[#2EAADB]">Admin sign in</Link></div>
-              </form>
-            </div>
-          </div>
-
-          <div className="w-full order-1 lg:order-2 flex items-center justify-center">
-            <div className="relative w-full max-w-lg lg:max-w-none">
-              <Image src="/contact-image.svg" alt="Sign up illustration" width={600} height={600} className="w-full h-auto object-contain" priority />
-            </div>
-          </div>
+        <AuthField
+          label="Password"
+          htmlFor="password"
+          icon={LockIcon}
+          error={errors.password}
+          trailing={strength.label ? <span className={`nbu-strength-label is-${strength.score}`}>{strength.label}</span> : null}
+        >
+          <PasswordInput
+            id="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            autoComplete="new-password"
+            minLength={PASSWORD_MIN}
+            placeholder={`At least ${PASSWORD_MIN} characters`}
+          />
+        </AuthField>
+        <div className="nbu-strength" aria-hidden="true">
+          {[1, 2, 3, 4].map((step) => (
+            <span key={step} className={formData.password && strength.score >= step ? `is-on is-${strength.score}` : ''} />
+          ))}
         </div>
-      </div>
-    </div>
+
+        <AuthField
+          label="Confirm password"
+          htmlFor="confirmPassword"
+          icon={LockIcon}
+          error={errors.confirmPassword}
+          trailing={confirmTouched ? (
+            passwordsMatch
+              ? <span className="nbu-match is-ok"><CheckIcon className="h-3 w-3" /> Matches</span>
+              : <span className="nbu-match is-bad"><XIcon className="h-3 w-3" /> Doesn&apos;t match</span>
+          ) : null}
+        >
+          <PasswordInput
+            id="confirmPassword"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            autoComplete="new-password"
+            minLength={PASSWORD_MIN}
+            placeholder="Repeat your password"
+          />
+        </AuthField>
+
+        <div className="nbu-captcha">
+          <CaptchaWidget refreshKey={captchaKey} onChange={setCaptcha} />
+        </div>
+
+        <label className="nbu-check is-top">
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(e) => {
+              setAgreed(e.target.checked)
+              if (errors.agreed) setErrors((prev) => ({ ...prev, agreed: undefined }))
+            }}
+          />
+          <span>
+            I agree to the <Link href="/terms" target="_blank">Terms of Service</Link> and{' '}
+            <Link href="/privacy" target="_blank">Privacy Policy</Link>.
+          </span>
+        </label>
+        {errors.agreed && <div className="nbu-error" role="alert">{errors.agreed}</div>}
+
+        <button type="submit" disabled={loading} className="nbu-submit">
+          {loading ? <LoaderIcon className="h-4 w-4 animate-spin" /> : <UserPlusIcon className="h-4 w-4" />}
+          {loading ? 'Creating account…' : 'Create account'}
+        </button>
+
+        {SHOW_GOOGLE_SIGNIN && (
+          <>
+            <div className="nbu-divider"><span>Or continue with</span></div>
+            <button type="button" className="nbu-oauth">
+              <img src="/google.svg" alt="" className="h-5 w-5" />
+              Continue with Google
+            </button>
+          </>
+        )}
+      </form>
+    </AuthLayout>
   )
 }

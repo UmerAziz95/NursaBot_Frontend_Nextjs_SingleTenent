@@ -63,7 +63,7 @@ function AssistantInner() {
         return (
             <AssistantBlocked
                 title="Chat is temporarily unavailable"
-                message="The assistant is currently disabled by the site administrator."
+                message="The assistant is temporarily unavailable. Please check back soon."
             />
         )
     }

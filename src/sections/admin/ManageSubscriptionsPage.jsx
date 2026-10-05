@@ -382,6 +382,11 @@ export default function ManageSubscriptionsPage() {
                                                         style={{ width: `${percent}%` }}
                                                     />
                                                 </div>
+                                                {Number(item.extra_tokens_total) > 0 && (
+                                                    <p className="mt-1 text-[11px] font-medium text-amber-700 tabular-nums" title="Purchased extra tokens: remaining / bought">
+                                                        + {formatTokens(item.extra_tokens_remaining)} / {formatTokens(item.extra_tokens_total)} extra
+                                                    </p>
+                                                )}
                                             </td>
                                             <td className="whitespace-nowrap">
                                                 <p>{formatDate(item.current_period_start)}</p>
@@ -466,6 +471,13 @@ export default function ManageSubscriptionsPage() {
                                         label="Tokens"
                                         value={`${formatTokens(selected.tokens_used)} used / ${formatTokens(selected.tokens_included)} included`}
                                     />
+                                    <Detail
+                                        label="Extra tokens (purchased)"
+                                        value={Number(selected.extra_tokens_total) > 0
+                                            ? `${formatTokens(selected.extra_tokens_remaining)} left / ${formatTokens(selected.extra_tokens_total)} bought (${selected.extra_token_orders} order${selected.extra_token_orders === 1 ? '' : 's'})`
+                                            : 'None'}
+                                    />
+                                    <Detail label="Total available" value={formatTokens(selected.total_tokens_available)} />
                                     <Detail label="Auto-renew" value="Off — manual reactivation" />
                                 </div>
                                 <div className="flex flex-wrap justify-end gap-2 pt-2">

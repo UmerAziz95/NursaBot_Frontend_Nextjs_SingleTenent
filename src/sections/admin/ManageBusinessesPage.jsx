@@ -6,7 +6,7 @@ import {
     Pencil as PencilIcon,
     Trash2 as TrashIcon,
     Eye as EyeIcon,
-    Plus as PlusIcon,
+    Lock as LockIcon,
     Search as SearchIcon,
     X as XIcon,
 } from 'lucide-react'
@@ -16,6 +16,28 @@ import { toast } from '@/lib/toast'
 const emptyBusinessForm = {
     business_client_id: '',
     name: '',
+}
+
+const PROTECTED_HINT_BUSINESS = 'The default business is protected and cannot be edited or deleted.'
+const PROTECTED_HINT_WORKSPACE = 'The default workspace is protected and cannot be edited or deleted.'
+
+const isDefaultId = (value) => String(value || '').trim().toLowerCase() === 'default'
+
+// Prefer the server's flag; fall back to the well-known "default" ids.
+const isProtectedBusiness = (business) =>
+    Boolean(business?.is_protected) || isDefaultId(business?.business_client_id)
+
+const isProtectedWorkspace = (workspace, businessId) =>
+    Boolean(workspace?.is_protected) ||
+    (isDefaultId(workspace?.workspace_id) && isDefaultId(workspace?.business_client_id || businessId))
+
+function DefaultPill() {
+    return (
+        <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-[#2EAADB]/30 bg-[#2EAADB]/10 px-2 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-[#0B6E99]">
+            <LockIcon className="h-2.5 w-2.5" />
+            Default
+        </span>
+    )
 }
 
 const emptyWorkspaceForm = {
@@ -130,13 +152,8 @@ export default function ManageBusinessesPage() {
         setSaving(false)
     }
 
-    const openCreateBusiness = () => {
-        setSelected(null)
-        setForm({ ...emptyBusinessForm })
-        setModal('create-business')
-    }
-
     const openEditBusiness = (business) => {
+        if (isProtectedBusiness(business)) return toast.error(PROTECTED_HINT_BUSINESS)
         setSelected(business)
         setForm({
             business_client_id: business.business_client_id || '',
@@ -159,16 +176,8 @@ export default function ManageBusinessesPage() {
         }
     }
 
-    const openCreateWorkspace = () => {
-        setSelected(null)
-        setForm({
-            ...emptyWorkspaceForm,
-            business_client_id: selectedBusinessFilter || businesses[0]?.business_client_id || '',
-        })
-        setModal('create-workspace')
-    }
-
     const openEditWorkspace = (workspace) => {
+        if (isProtectedWorkspace(workspace, selectedBusinessFilter)) return toast.error(PROTECTED_HINT_WORKSPACE)
         setSelected(workspace)
         setForm({
             business_client_id: workspace.business_client_id || selectedBusinessFilter,
@@ -265,6 +274,7 @@ export default function ManageBusinessesPage() {
     }
 
     const deleteBusiness = async (business) => {
+        if (isProtectedBusiness(business)) return toast.error(PROTECTED_HINT_BUSINESS)
         if (!window.confirm(`Delete business "${business.name}"? This also removes its workspaces and related users.`)) {
             return
         }
@@ -290,6 +300,7 @@ export default function ManageBusinessesPage() {
 
     const deleteWorkspace = async (workspace) => {
         const businessId = workspace.business_client_id || selectedBusinessFilter
+        if (isProtectedWorkspace(workspace, businessId)) return toast.error(PROTECTED_HINT_WORKSPACE)
         if (!window.confirm(`Delete workspace "${workspace.name}"?`)) return
         setBusyId(workspace.workspace_id)
         try {
@@ -328,30 +339,8 @@ export default function ManageBusinessesPage() {
         <div className="mx-auto max-w-6xl space-y-3 p-4 lg:p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="admin-page-desc">
-                    List, create, view, update, and delete businesses and workspaces.
+                    View and manage businesses and workspaces. The default business and workspace are protected.
                 </p>
-                <div className="flex flex-wrap gap-2">
-                    {tab === 'businesses' && canManage && (
-                        <button
-                            type="button"
-                            onClick={openCreateBusiness}
-                            className="admin-btn-primary"
-                        >
-                            <PlusIcon className="h-3.5 w-3.5" />
-                            New business
-                        </button>
-                    )}
-                    {tab === 'workspaces' && (
-                        <button
-                            type="button"
-                            onClick={openCreateWorkspace}
-                            className="admin-btn-primary"
-                        >
-                            <PlusIcon className="h-3.5 w-3.5" />
-                            New workspace
-                        </button>
-                    )}
-                </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -431,7 +420,10 @@ export default function ManageBusinessesPage() {
                                 ) : (
                                     filteredBusinesses.map((business) => (
                                         <tr key={business.business_client_id}>
-                                            <td className="font-medium text-slate-800">{business.name}</td>
+                                            <td className="font-medium text-slate-800">
+                                                {business.name}
+                                                {isProtectedBusiness(business) && <DefaultPill />}
+                                            </td>
                                             <td className="cell-muted">{business.business_client_id}</td>
                                             <td className="cell-muted">{business.workspace_count ?? 0}</td>
                                             <td className="col-actions">
@@ -444,15 +436,21 @@ export default function ManageBusinessesPage() {
                                                     </button>
                                                     {canManage && (
                                                         <>
-                                                            <button type="button" title="Edit" onClick={() => openEditBusiness(business)} className="admin-icon-btn">
+                                                            <button
+                                                                type="button"
+                                                                title={isProtectedBusiness(business) ? PROTECTED_HINT_BUSINESS : 'Edit'}
+                                                                disabled={isProtectedBusiness(business)}
+                                                                onClick={() => openEditBusiness(business)}
+                                                                className="admin-icon-btn disabled:cursor-not-allowed disabled:opacity-35"
+                                                            >
                                                                 <PencilIcon className="h-4 w-4" />
                                                             </button>
                                                             <button
                                                                 type="button"
-                                                                title="Delete"
-                                                                disabled={busyId === business.business_client_id}
+                                                                title={isProtectedBusiness(business) ? PROTECTED_HINT_BUSINESS : 'Delete'}
+                                                                disabled={isProtectedBusiness(business) || busyId === business.business_client_id}
                                                                 onClick={() => deleteBusiness(business)}
-                                                                className="admin-icon-btn text-red-500 hover:bg-red-50 hover:text-red-600"
+                                                                className="admin-icon-btn text-red-500 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-35"
                                                             >
                                                                 <TrashIcon className="h-4 w-4" />
                                                             </button>
@@ -497,7 +495,10 @@ export default function ManageBusinessesPage() {
                                 ) : (
                                     filteredWorkspaces.map((workspace) => (
                                         <tr key={workspace.workspace_id}>
-                                            <td className="font-medium text-slate-800">{workspace.name}</td>
+                                            <td className="font-medium text-slate-800">
+                                                {workspace.name}
+                                                {isProtectedWorkspace(workspace, selectedBusinessFilter) && <DefaultPill />}
+                                            </td>
                                             <td className="cell-muted">{workspace.workspace_id}</td>
                                             <td className="cell-muted">
                                                 {workspace.business_name || workspace.business_client_id || selectedBusinessFilter}
@@ -507,15 +508,21 @@ export default function ManageBusinessesPage() {
                                                     <button type="button" title="View" onClick={() => openViewWorkspace(workspace)} className="admin-icon-btn">
                                                         <EyeIcon className="h-4 w-4" />
                                                     </button>
-                                                    <button type="button" title="Edit" onClick={() => openEditWorkspace(workspace)} className="admin-icon-btn">
+                                                    <button
+                                                        type="button"
+                                                        title={isProtectedWorkspace(workspace, selectedBusinessFilter) ? PROTECTED_HINT_WORKSPACE : 'Edit'}
+                                                        disabled={isProtectedWorkspace(workspace, selectedBusinessFilter)}
+                                                        onClick={() => openEditWorkspace(workspace)}
+                                                        className="admin-icon-btn disabled:cursor-not-allowed disabled:opacity-35"
+                                                    >
                                                         <PencilIcon className="h-4 w-4" />
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        title="Delete"
-                                                        disabled={busyId === workspace.workspace_id}
+                                                        title={isProtectedWorkspace(workspace, selectedBusinessFilter) ? PROTECTED_HINT_WORKSPACE : 'Delete'}
+                                                        disabled={isProtectedWorkspace(workspace, selectedBusinessFilter) || busyId === workspace.workspace_id}
                                                         onClick={() => deleteWorkspace(workspace)}
-                                                        className="admin-icon-btn text-red-500 hover:bg-red-50 hover:text-red-600"
+                                                        className="admin-icon-btn text-red-500 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-35"
                                                     >
                                                         <TrashIcon className="h-4 w-4" />
                                                     </button>

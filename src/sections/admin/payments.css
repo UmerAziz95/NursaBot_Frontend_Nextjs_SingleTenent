@@ -1,0 +1,389 @@
+/* Admin payments module (nbpay-*). Uses the admin console tokens (--nba-*). */
+
+.nbpay {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .nbpay {
+    padding: 1.25rem 1.5rem 2rem;
+  }
+}
+
+/* Date range toolbar */
+.nbpay-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.nbpay-presets {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--nba-line);
+  border-radius: 0.875rem;
+  background: #fff;
+}
+
+.nbpay-preset {
+  padding: 0.4rem 0.75rem;
+  border: 0;
+  border-radius: 0.625rem;
+  background: transparent;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--nba-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.nbpay-preset:hover {
+  background: #f1f5f9;
+  color: var(--nba-navy);
+}
+
+.nbpay-preset.is-active {
+  background: var(--nba-navy);
+  color: #fff;
+}
+
+.nbpay-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.nbpay-dates label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2.375rem;
+  padding: 0 0.6rem 0 0.75rem;
+  border: 1px solid var(--nba-line);
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.nbpay-dates label:focus-within {
+  border-color: var(--nba-cyan);
+  box-shadow: 0 0 0 4px rgba(46, 170, 219, 0.14);
+}
+
+.nbpay-dates span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--nba-faint);
+}
+
+.nbpay-dates input {
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 0.8125rem;
+  color: var(--nba-ink);
+}
+
+/* Chart + token panel */
+.nbpay-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+}
+
+@media (max-width: 960px) {
+  .nbpay-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.nbpay-legend {
+  display: flex;
+  gap: 0.9rem;
+  font-size: 0.75rem;
+  color: var(--nba-muted);
+}
+
+.nbpay-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.nbpay-legend i {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 0.2rem;
+}
+
+.nbpay-legend i.is-subs,
+.nbpay-chart-stack .is-subs {
+  background: linear-gradient(180deg, #2eaadb, #1f7fa8);
+}
+
+.nbpay-legend i.is-tokens,
+.nbpay-chart-stack .is-tokens {
+  background: linear-gradient(180deg, #fbbf24, #f59e0b);
+}
+
+.nbpay-chart {
+  height: 13rem;
+}
+
+.nbpay-chart-bars {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 3px;
+  height: 100%;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--nba-line-soft);
+}
+
+.nbpay-chart-col {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
+  max-width: 3rem;
+  border-radius: 0.375rem;
+  cursor: default;
+}
+
+.nbpay-chart-col:hover {
+  background: rgba(46, 170, 219, 0.06);
+}
+
+.nbpay-chart-stack {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 0.375rem 0.375rem 0.125rem 0.125rem;
+  transition: height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.nbpay-chart-stack span {
+  display: block;
+  min-height: 2px;
+  flex-basis: 0;
+}
+
+.nbpay-chart-label {
+  position: absolute;
+  bottom: -1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.6875rem;
+  white-space: nowrap;
+  color: var(--nba-faint);
+}
+
+.nbpay-chart-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 13rem;
+  font-size: 0.8125rem;
+  color: var(--nba-muted);
+}
+
+.nbpay-token-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nbpay-token-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px dashed var(--nba-line-soft);
+  font-size: 0.8125rem;
+  color: var(--nba-muted);
+}
+
+.nbpay-token-list li:last-child {
+  border-bottom: 0;
+}
+
+.nbpay-token-list strong {
+  font-variant-numeric: tabular-nums;
+  color: var(--nba-navy);
+}
+
+.nbpay-token-list li.is-total strong {
+  color: #b45309;
+}
+
+.nbpay-token-meter {
+  height: 0.5rem;
+  margin-top: 0.75rem;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: #fef3c7;
+}
+
+.nbpay-token-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+}
+
+/* Table */
+.nbpay-table-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.nbpay-table-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--nba-line-soft);
+}
+
+.nbpay-search {
+  display: flex;
+  flex: 1 1 16rem;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.5rem;
+  padding: 0 0.875rem;
+  border: 1px solid #d8e2ea;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: var(--nba-faint);
+}
+
+.nbpay-search:focus-within {
+  border-color: var(--nba-cyan);
+  box-shadow: 0 0 0 4px rgba(46, 170, 219, 0.14);
+}
+
+.nbpay-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 0.875rem;
+  color: var(--nba-ink);
+}
+
+.nbpay-table-scroll {
+  overflow-x: auto;
+}
+
+.admin-console .nbpay-table {
+  min-width: 52rem;
+  border: 0;
+  border-radius: 0;
+}
+
+.nbpay-table .is-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.nbpay-customer {
+  font-weight: 600;
+  color: var(--nba-navy);
+}
+
+.nbpay-sub {
+  margin-top: 0.1rem;
+  font-size: 0.75rem;
+  color: var(--nba-faint);
+}
+
+.nbpay-mono,
+.nbpay-ref code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.nbpay-ref {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.nbpay-ref-kind {
+  flex-shrink: 0;
+  padding: 0.05rem 0.35rem;
+  border-radius: 0.3rem;
+  background: #f1f5f9;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--nba-muted);
+}
+
+.nbpay-ref code {
+  max-width: 17rem;
+  overflow: hidden;
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--nba-ink);
+}
+
+.nbpay-copy {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--nba-faint);
+  cursor: pointer;
+}
+
+.nbpay-copy:hover {
+  background: #f1f5f9;
+  color: var(--nba-cyan-ink);
+}
+
+.nbpay-amount {
+  font-weight: 700;
+  color: var(--nba-navy);
+}
+
+.nbpay-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--nba-line-soft);
+  font-size: 0.8125rem;
+  color: var(--nba-muted);
+}
+
+.nbpay-pager > div {
+  display: flex;
+  gap: 0.25rem;
+}

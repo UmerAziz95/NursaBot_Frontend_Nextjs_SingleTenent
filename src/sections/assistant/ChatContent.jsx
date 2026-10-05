@@ -1,7 +1,41 @@
 "use client"
 
-import { ArrowUp as ArrowUpIcon, Camera as CameraIcon, Mic as MicrophoneIcon, Clipboard as ClipboardIcon, Square as StopIcon, Trash2 as TrashIcon, X as CloseIcon } from "lucide-react"
-import { useState, useRef, useEffect } from "react"
+import {
+    ArrowDown as ArrowDownIcon,
+    ArrowUp as ArrowUpIcon,
+    BookOpenCheck as BookOpenCheckIcon,
+    Check as CheckIcon,
+    ChevronDown as ChevronDownIcon,
+    ClipboardList as ClipboardListIcon,
+    Copy as CopyIcon,
+    GitCompareArrows as CompareIcon,
+    ImagePlus as ImagePlusIcon,
+    Loader2 as LoaderIcon,
+    Mic as MicrophoneIcon,
+    RotateCcw as RetryIcon,
+    ShieldAlert as ShieldAlertIcon,
+    Square as StopIcon,
+    Trash2 as TrashIcon,
+    TriangleAlert as AlertIcon,
+    X as CloseIcon,
+} from "lucide-react"
+import { useState, useRef, useEffect, useLayoutEffect } from "react"
+import BrandMark from "@/sections/assistant/BrandMark"
+import ChatMarkdown from "@/sections/assistant/ChatMarkdown"
+import {
+    ANSWER_MODES,
+    DEFAULT_ANSWER_MODE,
+    answerModeByKey,
+    loadChatAnswerMode,
+    saveChatAnswerMode,
+} from "@/sections/assistant/answerModes"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
     extractApiErrorMessage,
     friendlyChatError,
@@ -13,6 +47,48 @@ import { useAppSettings } from "@/lib/app-settings"
 
 const MAX_IMAGES = 5
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const MAX_QUERY_CHARS = 5000
+const QUERY_COUNTER_FROM = 4000
+const MAX_VOICE_SECONDS = 120
+const VOICE_WARNING_SECONDS = 105
+const MAX_AUDIO_BYTES = 5 * 1024 * 1024
+const COMPOSER_MAX_HEIGHT = 200
+
+const SUGGESTIONS = [
+    {
+        icon: ShieldAlertIcon,
+        label: "Clinical priorities",
+        prompt: "What are the priority nursing interventions for a patient in diabetic ketoacidosis?",
+    },
+    {
+        icon: BookOpenCheckIcon,
+        label: "Practice quiz",
+        prompt: "Quiz me with 3 NCLEX-style questions on cardiac medications, then explain each answer.",
+    },
+    {
+        icon: CompareIcon,
+        label: "Compare concepts",
+        prompt: "Compare left-sided and right-sided heart failure in a simple table.",
+    },
+    {
+        icon: ClipboardListIcon,
+        label: "Care planning",
+        prompt: "Help me write a nursing care plan for a post-op patient at risk for infection.",
+    },
+]
+
+const greetingForHour = (hour) => {
+    if (hour < 12) return "Good morning"
+    if (hour < 18) return "Good afternoon"
+    return "Good evening"
+}
+
+const firstNameFrom = (value) => {
+    const text = String(value || "").trim()
+    if (!text) return ""
+    const base = text.includes("@") ? text.split("@")[0].split(/[._-]+/)[0] : text.split(/\s+/)[0]
+    return base ? base.charAt(0).toUpperCase() + base.slice(1) : ""
+}
 
 const formatDuration = (totalSeconds) => {
     const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0))
@@ -62,7 +138,15 @@ export default function ChatContent() {
     const [isLoadingThread, setIsLoadingThread] = useState(false)
     const [chatId, setChatId] = useState("")
     const [chatTitle, setChatTitle] = useState("")
+    // New chats start on the default mode; a changed mode is remembered per chat.
+    const [answerMode, setAnswerMode] = useState(DEFAULT_ANSWER_MODE)
+    const [copiedKey, setCopiedKey] = useState("")
+    const [showJumpToLatest, setShowJumpToLatest] = useState(false)
+    const [greeting, setGreeting] = useState({ salutation: "Hello", name: "" })
     const messagesEndRef = useRef(null)
+    const scrollContainerRef = useRef(null)
+    const textareaRef = useRef(null)
+    const copiedTimerRef = useRef(null)
     const imageInputRef = useRef(null)
     const mediaRecorderRef = useRef(null)
     const recordedChunksRef = useRef([])
@@ -79,8 +163,98 @@ export default function ChatContent() {
     }
 
     useEffect(() => {
+        if (messages.length === 0 && !isSending) {
+            scrollContainerRef.current?.scrollTo({ top: 0 })
+            return
+        }
         scrollToBottom()
     }, [messages, isSending])
+
+    useEffect(() => {
+        const updateGreeting = () => {
+            let name = ""
+            try {
+                const user = JSON.parse(localStorage.getItem("user") || "null") || {}
+                name = firstNameFrom(user.display_name || user.name || user.email)
+            } catch {
+                name = ""
+            }
+            setGreeting({ salutation: greetingForHour(new Date().getHours()), name })
+        }
+
+        updateGreeting()
+        window.addEventListener("assistant-profile-updated", updateGreeting)
+        return () => {
+            window.removeEventListener("assistant-profile-updated", updateGreeting)
+            if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current)
+        }
+    }, [])
+
+    // Grow the composer with its content, up to a cap, then scroll inside it.
+    // Re-measure on width changes too (e.g. the sidebar collapsing).
+    const resizeComposer = () => {
+        const el = textareaRef.current
+        if (!el) return
+        if (!el.value) {
+            // An empty textarea's scrollHeight includes a wrapped placeholder; use the CSS min-height.
+            el.style.height = ""
+            el.style.overflowY = "hidden"
+            return
+        }
+        el.style.height = "auto"
+        el.style.height = `${Math.min(el.scrollHeight, COMPOSER_MAX_HEIGHT)}px`
+        el.style.overflowY = el.scrollHeight > COMPOSER_MAX_HEIGHT ? "auto" : "hidden"
+    }
+
+    useLayoutEffect(() => {
+        resizeComposer()
+    }, [inputValue])
+
+    useEffect(() => {
+        const el = textareaRef.current
+        if (!el || typeof ResizeObserver === "undefined") return
+        let lastWidth = el.clientWidth
+        const observer = new ResizeObserver(() => {
+            if (el.clientWidth !== lastWidth) {
+                lastWidth = el.clientWidth
+                resizeComposer()
+            }
+        })
+        observer.observe(el)
+        return () => observer.disconnect()
+    }, [])
+
+    const handleThreadScroll = () => {
+        const el = scrollContainerRef.current
+        if (!el) return
+        const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+        setShowJumpToLatest(distanceFromBottom > 240)
+    }
+
+    const handleInputChange = (value) => {
+        if (value.length > MAX_QUERY_CHARS) {
+            setInputValue(value.slice(0, MAX_QUERY_CHARS))
+            toast.warning(`Messages can be up to ${MAX_QUERY_CHARS.toLocaleString()} characters. Extra text was removed.`)
+            return
+        }
+        setInputValue(value)
+    }
+
+    const changeAnswerMode = (modeKey) => {
+        setAnswerMode(modeKey)
+        // A brand-new chat has no id until its first message; that send saves the mode.
+        saveChatAnswerMode(chatId, modeKey)
+        textareaRef.current?.focus()
+    }
+
+    const copyMessage = (key, text) => {
+        if (typeof navigator === "undefined" || !navigator.clipboard) return
+        void navigator.clipboard.writeText(text || "").then(() => {
+            setCopiedKey(key)
+            if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current)
+            copiedTimerRef.current = setTimeout(() => setCopiedKey(""), 1600)
+        }).catch(() => toast.error("Couldn't copy to clipboard."))
+    }
 
     useEffect(() => {
         const busy = Boolean(isSending || isLoadingThread)
@@ -160,6 +334,7 @@ export default function ChatContent() {
         setInputValue("")
         setChatId(nextChatId)
         setChatTitle(nextChatTitle)
+        setAnswerMode(loadChatAnswerMode(nextChatId))
 
         try {
             const session = parseStoredJson('session') || {}
@@ -217,8 +392,8 @@ export default function ChatContent() {
                 text: friendlyLoadChatError(error.message),
                 sender: 'ai',
                 time: currentTime(),
+                isError: true,
             }])
-            toast.error(friendlyLoadChatError(error.message))
             setChatTitle(nextChatTitle || '')
         } finally {
             if (threadLoadSeqRef.current === requestSeq) {
@@ -238,6 +413,7 @@ export default function ChatContent() {
             setInputValue("")
             setChatId(nextChatId)
             setChatTitle("")
+            setAnswerMode(DEFAULT_ANSWER_MODE)
         }
 
         const handleOpenChat = (event) => {
@@ -446,16 +622,33 @@ export default function ChatContent() {
         if (!query) {
             return
         }
-        const attachedImages = selectedImages.map(image => image.dataUrl)
 
-        setMessages(prev => [...prev, {
-            text: query,
-            sender: "user",
-            time: currentTime(),
-            imageDataUrls: attachedImages,
-        }])
-        setInputValue("")
+        if (query.length > MAX_QUERY_CHARS) {
+            toast.error(`Messages can be up to ${MAX_QUERY_CHARS.toLocaleString()} characters. Please shorten your message.`)
+            return
+        }
+
+        await submitQuery(query, selectedImages.map(image => image.dataUrl))
+    }
+
+    // Sends a text query. `echo` controls whether the user's message is appended
+    // (false when retrying, since the original message is already on screen).
+    const submitQuery = async (query, attachedImages = [], { echo = true } = {}) => {
+        if (!query || isSending || isLoadingThread) {
+            return
+        }
+
+        if (echo) {
+            setMessages(prev => [...prev, {
+                text: query,
+                sender: "user",
+                time: currentTime(),
+                imageDataUrls: attachedImages,
+            }])
+            setInputValue("")
+        }
         setIsSending(true)
+        const modeAtSend = answerMode
 
         try {
             const nextChatId = chatId || generateChatId()
@@ -467,6 +660,9 @@ export default function ChatContent() {
             if (!chatTitle) {
                 setChatTitle(nextChatTitle)
             }
+            if (!chatId) {
+                saveChatAnswerMode(nextChatId, modeAtSend)
+            }
 
             const token = localStorage.getItem('token')
             const payload = {
@@ -474,6 +670,7 @@ export default function ChatContent() {
                 query,
                 chat_id: nextChatId,
                 chat_title: nextChatTitle,
+                answer_mode: modeAtSend,
                 ...(attachedImages.length
                     ? { image_data_url: attachedImages[0], image_data_urls: attachedImages }
                     : {}),
@@ -503,6 +700,10 @@ export default function ChatContent() {
                     window.location.href = `/plans?reason=${reason}`
                     return
                 }
+                if (code === 'token_quota_exceeded') {
+                    window.location.href = '/tokens?reason=quota'
+                    return
+                }
                 const message = friendlyChatError(extractApiErrorMessage(data), { code })
                 throw new Error(message)
             }
@@ -518,7 +719,7 @@ export default function ChatContent() {
                 setChatTitle(savedChatTitle)
             }
 
-            setMessages(prev => [...prev, { text: answer, sender: 'ai', time: currentTime() }])
+            setMessages(prev => [...prev, { text: answer, sender: 'ai', time: currentTime(), mode: modeAtSend }])
             clearSelectedImage()
             notifyChatHeadersUpdated(savedChatId, savedChatTitle)
         } catch (error) {
@@ -527,11 +728,18 @@ export default function ChatContent() {
                 text: message,
                 sender: 'ai',
                 time: currentTime(),
+                isError: true,
+                retry: { query, images: attachedImages },
             }])
-            toast.error(message)
         } finally {
             setIsSending(false)
         }
+    }
+
+    const retryMessage = (failedMessage) => {
+        if (!failedMessage?.retry?.query || isSending || isLoadingThread) return
+        setMessages(prev => prev.filter(message => message !== failedMessage))
+        void submitQuery(failedMessage.retry.query, failedMessage.retry.images || [], { echo: false })
     }
 
     const handleSendRecordedAudio = async (audioBlob) => {
@@ -546,6 +754,7 @@ export default function ChatContent() {
             sender: "user",
             time: currentTime(),
         }])
+        const modeAtSend = answerMode
 
         try {
             const nextChatId = chatId || generateChatId()
@@ -553,6 +762,7 @@ export default function ChatContent() {
 
             if (!chatId) {
                 setChatId(nextChatId)
+                saveChatAnswerMode(nextChatId, modeAtSend)
             }
 
             const token = localStorage.getItem('token')
@@ -563,6 +773,7 @@ export default function ChatContent() {
             formData.append('workspace_id', context.workspace_id)
             formData.append('user_id', context.user_id)
             formData.append('chat_id', nextChatId)
+            formData.append('answer_mode', modeAtSend)
             if (nextChatTitle) {
                 formData.append('chat_title', nextChatTitle)
             }
@@ -608,7 +819,7 @@ export default function ChatContent() {
                 }
             }))
 
-            setMessages(prev => [...prev, { text: answer, sender: 'ai', time: currentTime() }])
+            setMessages(prev => [...prev, { text: answer, sender: 'ai', time: currentTime(), mode: modeAtSend }])
             notifyChatHeadersUpdated(nextChatId, resolvedChatTitle)
         } catch (error) {
             const message = friendlyVoiceError(error.message)
@@ -616,8 +827,8 @@ export default function ChatContent() {
                 text: message,
                 sender: 'ai',
                 time: currentTime(),
+                isError: true,
             }])
-            toast.error(message)
         } finally {
             setIsSending(false)
         }
@@ -708,6 +919,11 @@ export default function ChatContent() {
                     return
                 }
 
+                if (audioBlob.size > MAX_AUDIO_BYTES) {
+                    toast.error('This voice note is larger than 5 MB. Please record a shorter message.')
+                    return
+                }
+
                 if (autoSend) {
                     sendRecordedAudioRef.current?.(audioBlob)
                     return
@@ -729,6 +945,10 @@ export default function ChatContent() {
             recordingTimerRef.current = setInterval(() => {
                 recordingSecondsRef.current += 1
                 setRecordingSeconds(recordingSecondsRef.current)
+                if (recordingSecondsRef.current >= MAX_VOICE_SECONDS) {
+                    stopAudioRecording()
+                    toast.info('Voice notes are limited to 2 minutes. Recording stopped — review it and press send.')
+                }
             }, 1000)
         } catch (error) {
             if (mediaStreamRef.current) {
@@ -773,19 +993,23 @@ export default function ChatContent() {
     }
 
     const handleKeyDown = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+        if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent?.isComposing) {
             e.preventDefault()
             handleSendMessage(e)
         }
     }
 
+    const siteName = appSettings.site_name || 'NursingAI'
     const composerDisabled = isSending || isLoadingThread
     const canSubmit = !composerDisabled && (isRecordingAudio || Boolean(pendingAudio) || Boolean(inputValue.trim()))
+    const showWelcome = !isLoadingThread && messages.length === 0
+    const currentMode = answerModeByKey(answerMode)
+    const CurrentModeIcon = currentMode.icon
 
-    const renderComposer = ({ className = '' } = {}) => (
-        <div className={className}>
+    const renderComposer = () => (
+        <div className="nb-composer-wrap">
             {isRecordingAudio && (
-                <div className="mb-2 flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-2.5">
+                <div className="nb-composer-banner is-recording">
                     <span className="relative flex h-2.5 w-2.5 shrink-0">
                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
                         <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
@@ -803,7 +1027,14 @@ export default function ChatContent() {
                             />
                         ))}
                     </span>
-                    <span className="font-mono text-sm tabular-nums text-red-600">{formatDuration(recordingSeconds)}</span>
+                    <span className={`font-mono text-sm tabular-nums ${recordingSeconds >= VOICE_WARNING_SECONDS ? 'font-semibold text-amber-600' : 'text-red-600'}`}>
+                        {formatDuration(recordingSeconds)} / {formatDuration(MAX_VOICE_SECONDS)}
+                    </span>
+                    {recordingSeconds >= VOICE_WARNING_SECONDS && (
+                        <span className="hidden text-xs font-medium text-amber-600 sm:inline">
+                            Stops in {MAX_VOICE_SECONDS - recordingSeconds}s
+                        </span>
+                    )}
                     <div className="ml-auto flex items-center gap-2">
                         <button
                             type="button"
@@ -827,8 +1058,10 @@ export default function ChatContent() {
             )}
 
             {!isRecordingAudio && pendingAudio && (
-                <div className="mb-2 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-2.5">
-                    <MicrophoneIcon className="w-4 h-4 shrink-0 text-[#10a37f]" />
+                <div className="nb-composer-banner">
+                    <span className="nb-composer-banner-icon">
+                        <MicrophoneIcon className="w-4 h-4" />
+                    </span>
                     <div className="min-w-0">
                         <p className="text-sm font-medium text-slate-700">Voice note ready</p>
                         <p className="text-xs text-slate-500">{formatDuration(pendingAudio.duration)} · press send to submit</p>
@@ -846,20 +1079,16 @@ export default function ChatContent() {
                 </div>
             )}
 
-            <div className="rounded-[28px] border border-slate-200 bg-white shadow-sm transition focus-within:border-slate-300 focus-within:shadow-md">
+            <form onSubmit={handleSendMessage} className={`nb-composer ${composerDisabled ? 'is-busy' : ''}`}>
                 {selectedImages.length > 0 && (
-                    <div className="flex flex-wrap gap-2 px-4 pt-3">
+                    <div className="nb-composer-attachments">
                         {selectedImages.map((image) => (
                             <div key={image.id} className="group relative">
-                                <img
-                                    src={image.dataUrl}
-                                    alt={image.name}
-                                    className="h-16 w-16 rounded-xl border border-slate-200 object-cover"
-                                />
+                                <img src={image.dataUrl} alt={image.name} className="nb-composer-thumb" />
                                 <button
                                     type="button"
                                     onClick={() => removeSelectedImage(image.id)}
-                                    className="absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition hover:bg-slate-700"
+                                    className="nb-composer-thumb-remove"
                                     aria-label={`Remove ${image.name}`}
                                     title="Remove image"
                                 >
@@ -870,37 +1099,69 @@ export default function ChatContent() {
                     </div>
                 )}
 
-                <form
-                    onSubmit={handleSendMessage}
-                    className="flex items-end gap-2 px-4 py-3"
-                >
-                    <input
-                        type="text"
-                        placeholder={isRecordingAudio ? 'Recording voice note...' : (pendingAudio ? 'Voice note attached' : 'Message NursingAI...')}
-                        className="min-w-0 flex-1 bg-transparent outline-none user-portal-chat-message text-slate-800 placeholder:text-slate-400 py-0.5"
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        disabled={composerDisabled || isRecordingAudio || Boolean(pendingAudio)}
-                    />
-                    <div className="flex items-center gap-1 shrink-0 pb-0.5">
-                        {appSettings.voice_chat_enabled ? (
-                            <button
-                                type="button"
-                                onClick={handleMicClick}
-                                disabled={composerDisabled}
-                                className={`p-2 rounded-full transition disabled:opacity-50 ${isRecordingAudio ? 'bg-red-500 text-white hover:bg-red-600' : 'text-slate-500 hover:bg-slate-100'}`}
-                                aria-label={isRecordingAudio ? 'Stop recording' : 'Record voice note'}
-                                title={isRecordingAudio ? 'Stop recording' : (pendingAudio ? 'Record again' : 'Record voice note')}
+                <textarea
+                    ref={textareaRef}
+                    rows={1}
+                    placeholder={isRecordingAudio ? 'Recording voice note…' : (pendingAudio ? 'Voice note attached' : `Ask ${siteName} anything about nursing…`)}
+                    className="nb-composer-input user-portal-chat-message"
+                    value={inputValue}
+                    onChange={(e) => handleInputChange(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    disabled={composerDisabled || isRecordingAudio || Boolean(pendingAudio)}
+                    aria-label="Message"
+                />
+
+                <div className="nb-composer-toolbar">
+                    <div className="flex min-w-0 items-center gap-1">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    type="button"
+                                    className={`nb-mode-trigger ${answerMode !== DEFAULT_ANSWER_MODE ? 'is-custom' : ''}`}
+                                    aria-label={`Answer mode: ${currentMode.label}. Change answer mode`}
+                                    title="Answer mode"
+                                >
+                                    <CurrentModeIcon className="h-4 w-4" />
+                                    <span className="nb-mode-trigger-label">{currentMode.label}</span>
+                                    <ChevronDownIcon className="nb-mode-trigger-chevron h-3.5 w-3.5" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                                side="top"
+                                align="start"
+                                sideOffset={10}
+                                collisionPadding={12}
+                                className="nb-mode-menu w-72 rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-[0_20px_50px_-12px_rgba(5,52,71,0.28)]"
                             >
-                                <MicrophoneIcon className="w-4 h-4" />
-                            </button>
-                        ) : null}
+                                <DropdownMenuLabel className="nb-mode-menu-label">Answer mode</DropdownMenuLabel>
+                                {ANSWER_MODES.map(({ key, label, description, icon: Icon }) => {
+                                    const selected = key === answerMode
+                                    return (
+                                        <DropdownMenuItem
+                                            key={key}
+                                            onSelect={() => changeAnswerMode(key)}
+                                            className={`nb-mode-option ${selected ? 'is-selected' : ''}`}
+                                        >
+                                            <span className="nb-mode-option-icon"><Icon className="h-4 w-4" /></span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="nb-mode-option-label">
+                                                    {label}
+                                                    {key === DEFAULT_ANSWER_MODE && <span className="nb-mode-option-default">Default</span>}
+                                                </span>
+                                                <span className="nb-mode-option-desc">{description}</span>
+                                            </span>
+                                            {selected && <CheckIcon className="nb-mode-option-check h-4 w-4" />}
+                                        </DropdownMenuItem>
+                                    )
+                                })}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <span className="nb-composer-toolbar-sep" aria-hidden="true" />
                         <button
                             type="button"
                             onClick={handlePickImage}
                             disabled={composerDisabled || isRecordingAudio || selectedImages.length >= MAX_IMAGES}
-                            className="p-2 rounded-full text-slate-500 transition hover:bg-slate-100 disabled:opacity-50"
+                            className="nb-composer-tool"
                             aria-label="Attach image"
                             title={
                                 selectedImages.length >= MAX_IMAGES
@@ -908,123 +1169,243 @@ export default function ChatContent() {
                                     : `Attach images (${selectedImages.length}/${MAX_IMAGES})`
                             }
                         >
-                            <CameraIcon className="w-4 h-4" />
+                            <ImagePlusIcon className="w-[18px] h-[18px]" />
                         </button>
+                        {appSettings.voice_chat_enabled ? (
+                            <button
+                                type="button"
+                                onClick={handleMicClick}
+                                disabled={composerDisabled}
+                                className={`nb-composer-tool ${isRecordingAudio ? 'is-recording' : ''}`}
+                                aria-label={isRecordingAudio ? 'Stop recording' : 'Record voice note'}
+                                title={isRecordingAudio ? 'Stop recording' : (pendingAudio ? 'Record again' : 'Record voice note')}
+                            >
+                                <MicrophoneIcon className="w-[18px] h-[18px]" />
+                            </button>
+                        ) : null}
+                        {selectedImages.length > 0 && (
+                            <span className="nb-composer-count">{selectedImages.length}/{MAX_IMAGES} images</span>
+                        )}
+                        {inputValue.length >= QUERY_COUNTER_FROM && (
+                            <span
+                                className={`nb-composer-count ${inputValue.length >= MAX_QUERY_CHARS ? 'is-limit' : 'is-near'}`}
+                                aria-live="polite"
+                            >
+                                {inputValue.length.toLocaleString()} / {MAX_QUERY_CHARS.toLocaleString()}
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <span className="nb-composer-hint">
+                            <kbd>Enter</kbd> to send · <kbd>Shift</kbd> + <kbd>Enter</kbd> new line
+                        </span>
                         <button
                             type="submit"
                             disabled={!canSubmit}
-                            className="w-8 h-8 rounded-full bg-slate-900 text-white inline-flex items-center justify-center transition hover:bg-slate-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
+                            className="nb-composer-send"
                             aria-label="Send message"
+                            title="Send message"
                         >
-                            <ArrowUpIcon className="w-4 h-4" />
+                            {isSending
+                                ? <LoaderIcon className="w-4 h-4 animate-spin" />
+                                : <ArrowUpIcon className="w-4 h-4" strokeWidth={2.5} />}
                         </button>
                     </div>
-                </form>
+                </div>
+            </form>
+        </div>
+    )
+
+    const renderWelcome = () => (
+        <div className="nb-welcome">
+            <BrandMark size="lg" />
+            <h2 className="nb-welcome-title">
+                {greeting.salutation}{greeting.name ? `, ${greeting.name}` : ''}
+            </h2>
+            <p className="nb-welcome-desc">
+                I&apos;m {siteName}, your nursing study companion. Ask about NCLEX topics,
+                clinical reasoning, medications or care plans.
+            </p>
+
+            <div className="nb-suggestions">
+                {SUGGESTIONS.map(({ icon: Icon, label, prompt }) => (
+                    <button
+                        key={label}
+                        type="button"
+                        className="nb-suggestion"
+                        onClick={() => void submitQuery(prompt)}
+                        disabled={composerDisabled}
+                    >
+                        <span className="nb-suggestion-icon">
+                            <Icon className="w-4 h-4" />
+                        </span>
+                        <span className="min-w-0">
+                            <span className="nb-suggestion-label">{label}</span>
+                            <span className="nb-suggestion-prompt">{prompt}</span>
+                        </span>
+                    </button>
+                ))}
             </div>
         </div>
     )
 
-    return (
-        <div className="chat-content w-full h-full min-h-0 min-w-0 overflow-hidden bg-[#f7f7f8]">
-            <div className="chatbox w-full h-full min-h-0 flex flex-col overflow-hidden">
-                <input
-                    ref={imageInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={handleImageSelected}
-                />
+    const renderMessage = (message, index) => {
+        const key = message.id || `msg-${index}`
 
-                <div className="flex-1 min-h-0 overflow-y-auto">
-                    <div className="mx-auto w-full max-w-3xl px-4 md:px-6 py-6 space-y-6">
-                        {isLoadingThread && messages.length === 0 && (
-                            <div className="py-16 text-center text-sm text-slate-500">
-                                Loading conversation...
+        if (message.sender === 'user') {
+            const images = Array.isArray(message.imageDataUrls) ? message.imageDataUrls : []
+            return (
+                <div key={key} className="nb-msg nb-msg-user">
+                    <div className="nb-msg-user-bubble user-portal-chat-message">
+                        {images.length > 0 && (
+                            <div className={`mb-2 grid gap-2 ${images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                                {images.map((dataUrl, imageIndex) => (
+                                    <img
+                                        key={imageIndex}
+                                        src={dataUrl}
+                                        alt={`Attachment ${imageIndex + 1}`}
+                                        className="max-h-[220px] w-full rounded-xl object-cover"
+                                    />
+                                ))}
                             </div>
                         )}
-                        {!isLoadingThread && messages.length === 0 && (
-                            <div className="min-h-[280px] flex flex-col items-center justify-center text-center px-4">
-                                <div className="w-12 h-12 rounded-full bg-[#10a37f] text-white text-sm font-semibold inline-flex items-center justify-center mb-4">
-                                    N
-                                </div>
-                                <p className="user-portal-chat-empty-title mb-2">
-                                    How can I help you today?
-                                </p>
-                                <p className="user-portal-chat-empty-desc">
-                                    Ask about NCLEX topics, nursing concepts, or exam prep.
-                                </p>
-                            </div>
+                        {message.text}
+                    </div>
+                    <span className="nb-msg-meta">{message.time}</span>
+                </div>
+            )
+        }
+
+        return (
+            <div key={key} className={`nb-msg nb-msg-ai ${message.isError ? 'is-error' : ''}`}>
+                {message.isError ? (
+                    <span className="nb-msg-error-avatar" aria-hidden="true">
+                        <AlertIcon className="w-3.5 h-3.5" />
+                    </span>
+                ) : (
+                    <BrandMark size="sm" />
+                )}
+                <div className="min-w-0 flex-1">
+                    <div className="nb-msg-head">
+                        <span className="nb-msg-author">{message.isError ? 'Something went wrong' : siteName}</span>
+                        <span className="nb-msg-time">{message.time}</span>
+                        {!message.isError && message.mode && (
+                            <span className="nb-msg-mode">{answerModeByKey(message.mode).label}</span>
                         )}
-                        {messages.map((message, index) => (
-                            message.sender === 'user' ? (
-                                <div key={index} className="flex justify-end">
-                                    <div className="max-w-[85%] md:max-w-[75%] rounded-[22px] bg-[#f4f4f4] px-4 py-2.5 user-portal-chat-message text-slate-800 whitespace-pre-wrap">
-                                        {message.text}
-                                        {Array.isArray(message.imageDataUrls) && message.imageDataUrls.length > 0 && (
-                                            <div className={`mt-2 grid gap-2 ${message.imageDataUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                                                {message.imageDataUrls.map((dataUrl, imageIndex) => (
-                                                    <img
-                                                        key={imageIndex}
-                                                        src={dataUrl}
-                                                        alt={`Attachment ${imageIndex + 1}`}
-                                                        className="rounded-xl border border-slate-200 max-h-[220px] w-full object-cover"
-                                                    />
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div key={index} className="flex items-start gap-3 group">
-                                    <div className="w-8 h-8 rounded-full bg-[#10a37f] text-white text-sm font-semibold inline-flex items-center justify-center shrink-0 mt-0.5">
-                                        N
-                                    </div>
-                                    <div className="min-w-0 flex-1 rounded-2xl bg-[#eaf7f2] px-4 py-3">
-                                        <p className="user-portal-chat-message text-slate-800 whitespace-pre-wrap">
-                                            {message.text}
-                                        </p>
-                                        <div className="mt-2 opacity-0 group-hover:opacity-100 transition">
-                                            <button
-                                                type="button"
-                                                className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-white/70 hover:text-slate-700"
-                                                onClick={() => {
-                                                    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-                                                        void navigator.clipboard.writeText(message.text || '')
-                                                    }
-                                                }}
-                                            >
-                                                <ClipboardIcon className="w-3.5 h-3.5" />
-                                                Copy
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )
-                        ))}
-                        {isSending && (
-                            <div className="flex items-start gap-3" aria-live="polite" aria-label="Assistant is responding">
-                                <div className="w-8 h-8 rounded-full bg-[#10a37f] text-white text-sm font-semibold inline-flex items-center justify-center shrink-0">
-                                    N
-                                </div>
-                                <div className="rounded-2xl bg-[#eaf7f2] px-4 py-3 inline-flex items-center gap-1.5">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-[typing-dot_1.2s_ease-in-out_infinite]" />
-                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-[typing-dot_1.2s_ease-in-out_0.2s_infinite]" />
-                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-[typing-dot_1.2s_ease-in-out_0.4s_infinite]" />
-                                </div>
-                            </div>
+                    </div>
+
+                    {message.isError ? (
+                        <p className="nb-msg-error-text">{message.text}</p>
+                    ) : (
+                        <ChatMarkdown>{message.text}</ChatMarkdown>
+                    )}
+
+                    <div className="nb-msg-actions">
+                        {message.isError ? (
+                            message.retry ? (
+                                <button
+                                    type="button"
+                                    className="nb-msg-action is-strong"
+                                    onClick={() => retryMessage(message)}
+                                    disabled={composerDisabled}
+                                >
+                                    <RetryIcon className="w-3.5 h-3.5" />
+                                    Try again
+                                </button>
+                            ) : null
+                        ) : (
+                            <button
+                                type="button"
+                                className="nb-msg-action"
+                                onClick={() => copyMessage(key, message.text)}
+                                aria-label="Copy response"
+                            >
+                                {copiedKey === key ? (
+                                    <>
+                                        <CheckIcon className="w-3.5 h-3.5 text-emerald-600" />
+                                        Copied
+                                    </>
+                                ) : (
+                                    <>
+                                        <CopyIcon className="w-3.5 h-3.5" />
+                                        Copy
+                                    </>
+                                )}
+                            </button>
                         )}
-                        <div ref={messagesEndRef} />
                     </div>
                 </div>
+            </div>
+        )
+    }
 
-                <div className="shrink-0 bg-[#f7f7f8] px-4 md:px-6 pb-4 pt-2">
-                    <div className="max-w-3xl mx-auto">
-                        {renderComposer()}
-                        <p className="user-portal-chat-footnote">
-                            NursingAI can make mistakes. Verify important clinical information.
-                        </p>
-                    </div>
+    return (
+        <div className="nb-chat chat-content">
+            <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleImageSelected}
+            />
+
+            <div ref={scrollContainerRef} onScroll={handleThreadScroll} className="nb-chat-scroll">
+                <div className={`nb-chat-thread ${showWelcome ? 'is-empty' : ''}`}>
+                    {isLoadingThread && messages.length === 0 && (
+                        <div className="nb-skeleton" role="status" aria-label="Loading conversation">
+                            <div className="nb-skeleton-row is-user"><span style={{ width: '42%' }} /></div>
+                            <div className="nb-skeleton-row">
+                                <span className="nb-skeleton-avatar" />
+                                <div className="flex-1 space-y-2">
+                                    <span style={{ width: '88%' }} />
+                                    <span style={{ width: '72%' }} />
+                                    <span style={{ width: '54%' }} />
+                                </div>
+                            </div>
+                            <div className="nb-skeleton-row is-user"><span style={{ width: '30%' }} /></div>
+                        </div>
+                    )}
+
+                    {showWelcome && renderWelcome()}
+
+                    {messages.map(renderMessage)}
+
+                    {isSending && (
+                        <div className="nb-msg nb-msg-ai" aria-live="polite" aria-label="Assistant is responding">
+                            <BrandMark size="sm" pulse />
+                            <div className="nb-thinking">
+                                <span className="nb-thinking-dots" aria-hidden="true">
+                                    <span />
+                                    <span />
+                                    <span />
+                                </span>
+                                Thinking…
+                            </div>
+                        </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                </div>
+            </div>
+
+            <div className="nb-chat-dock">
+                {showJumpToLatest && (
+                    <button
+                        type="button"
+                        className="nb-jump"
+                        onClick={scrollToBottom}
+                        aria-label="Jump to latest message"
+                        title="Jump to latest"
+                    >
+                        <ArrowDownIcon className="w-4 h-4" />
+                    </button>
+                )}
+                <div className="nb-chat-dock-inner">
+                    {renderComposer()}
+                    <p className="nb-chat-footnote">
+                        {siteName} can make mistakes. Verify important clinical information.
+                    </p>
                 </div>
             </div>
         </div>

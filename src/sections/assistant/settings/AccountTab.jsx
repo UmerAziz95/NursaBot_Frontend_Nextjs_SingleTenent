@@ -2,13 +2,25 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import {
+    ArrowUpRight as ArrowUpRightIcon,
+    CalendarDays as CalendarIcon,
+    Check as CheckIcon,
+    Coins as CoinsIcon,
+    Crown as CrownIcon,
+    PlusCircle as PlusCircleIcon,
+    ShieldCheck as ShieldCheckIcon,
+    Sparkles as SparklesIcon,
+    TriangleAlert as AlertIcon,
+} from 'lucide-react'
 import { TabsContent } from '@/components/ui/tabs'
-import { Check as CheckIcon } from 'lucide-react'
 import { formatTokens, useSettings } from '@/sections/assistant/settings/SettingsContext'
+import { PageHeader, Section, StatusPill } from '@/sections/assistant/settings/SettingsUI'
 import { fetchLaravel } from '@/lib/laravel-api'
 import { toast } from '@/lib/toast'
+import './token-balance.css'
 
-const panelClass = 'user-portal-panel'
+const DAY_MS = 24 * 60 * 60 * 1000
 
 const formatDate = (value) => {
     if (!value) return '—'
@@ -23,11 +35,17 @@ const formatDate = (value) => {
     }
 }
 
-const statusBadgeClass = (status) => {
-    if (status === 'active') return 'bg-emerald-50 text-emerald-700'
-    if (status === 'expired') return 'bg-amber-50 text-amber-800'
-    if (status === 'cancelled') return 'bg-rose-50 text-rose-700'
-    return 'bg-slate-100 text-slate-600'
+const daysUntil = (value) => {
+    if (!value) return null
+    const end = new Date(value).getTime()
+    if (Number.isNaN(end)) return null
+    return Math.max(0, Math.ceil((end - Date.now()) / DAY_MS))
+}
+
+const usageTone = (percent) => {
+    if (percent >= 95) return 'is-critical'
+    if (percent >= 80) return 'is-warning'
+    return ''
 }
 
 export default function AccountTab() {
@@ -48,6 +66,12 @@ export default function AccountTab() {
         profile.requires_reactivation
         || ['expired', 'cancelled'].includes(String(subscription?.status || ''))
     )
+    const daysLeft = daysUntil(subscription?.current_period_end)
+    const extraTotal = Number(subscription?.extra_tokens_total || 0)
+    const extraUsed = Number(subscription?.extra_tokens_used || 0)
+    const extraRemaining = Number(subscription?.extra_tokens_remaining || 0)
+    const extraPercent = extraTotal > 0 ? Math.min(100, Math.round((extraUsed / extraTotal) * 100)) : 0
+    const totalAvailable = (isActive ? remaining : 0) + extraRemaining
 
     const cancelSubscription = async () => {
         if (!window.confirm('Cancel your subscription? Chat will stop until you reactivate manually.')) return
@@ -66,174 +90,200 @@ export default function AccountTab() {
     }
 
     return (
-        <TabsContent value="account" className="m-0 block w-full space-y-5 p-5 outline-none md:p-7">
-            <header className="border-b border-slate-100 pb-4">
-                <h2 className="user-portal-page-title">Plan &amp; usage</h2>
-                <p className="user-portal-page-desc mt-1">
-                    Monthly subscription and token usage. Plans do not auto-renew — reactivate manually when a period ends.
-                </p>
-            </header>
+        <TabsContent value="account" className="nbs-page m-0 outline-none">
+            <PageHeader
+                title="Plan & usage"
+                description="Your monthly subscription and token usage. Plans don't auto-renew — reactivate when a period ends."
+            />
 
             {isAdmin && !subscription ? (
-                <div className={`${panelClass} bg-slate-50`}>
-                    <h3 className="user-portal-section-title">Admin access</h3>
-                    <p className="user-portal-page-desc mt-2">
-                        Administrators can use chat without a paid subscription.
-                    </p>
-                </div>
+                <Section icon={ShieldCheckIcon} title="Admin access" description="Administrators can use chat without a paid subscription." />
             ) : needsReactivation && subscription ? (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="user-portal-section-title text-amber-900!">
-                            Subscription {subscription.status}
-                        </h3>
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${statusBadgeClass(subscription.status)}`}>
-                            {subscription.status}
-                        </span>
-                    </div>
-                    <p className="mt-2 text-sm leading-relaxed text-amber-800">
-                        Your monthly period ended and chat is paused. There is no auto-renewal — reactivate
-                        {plan?.name ? ` your ${plan.name} plan` : ' your plan'} to continue chatting.
-                    </p>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                        <div className="rounded-lg bg-white/70 px-3 py-2">
-                            <p className="user-portal-kicker">Last plan</p>
-                            <p className="text-sm font-medium text-amber-950">{plan?.name || profile.plan || '—'}</p>
+                <Section
+                    tone="warning"
+                    icon={AlertIcon}
+                    title={`Subscription ${subscription.status}`}
+                    description={`Your monthly period ended and chat is paused. Reactivate${plan?.name ? ` your ${plan.name} plan` : ' your plan'} to keep chatting.`}
+                    action={<StatusPill status={subscription.status} />}
+                >
+                    <div className="nbs-grid">
+                        <div className="nbs-tile is-plain">
+                            <div className="min-w-0">
+                                <div className="nbs-tile-label">Last plan</div>
+                                <div className="nbs-tile-value">{plan?.name || profile.plan || '—'}</div>
+                            </div>
                         </div>
-                        <div className="rounded-lg bg-white/70 px-3 py-2">
-                            <p className="user-portal-kicker">Ended</p>
-                            <p className="text-sm font-medium text-amber-950">{formatDate(subscription.current_period_end)}</p>
+                        <div className="nbs-tile is-plain">
+                            <div className="min-w-0">
+                                <div className="nbs-tile-label">Ended</div>
+                                <div className="nbs-tile-value">{formatDate(subscription.current_period_end)}</div>
+                            </div>
                         </div>
                     </div>
-                    <Link
-                        href={`/plans?reason=expired&plan=${encodeURIComponent(plan?.slug || profile.plan || '')}`}
-                        className="user-portal-btn-primary mt-4"
-                    >
-                        Reactivate subscription
-                    </Link>
-                </div>
+                    <div className="nbs-actions is-start">
+                        <Link
+                            href={`/plans?reason=expired&plan=${encodeURIComponent(plan?.slug || profile.plan || '')}`}
+                            className="nbs-btn is-primary"
+                        >
+                            Reactivate subscription
+                            <ArrowUpRightIcon className="size-4" />
+                        </Link>
+                    </div>
+                </Section>
             ) : !subscription ? (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
-                    <h3 className="user-portal-section-title text-amber-900!">No active plan</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-amber-800">
-                        Purchase a monthly plan to unlock chat and document-powered answers.
-                    </p>
-                    <Link
-                        href="/plans"
-                        className="user-portal-btn-primary mt-4"
-                    >
+                <div className="nbs-empty is-card">
+                    <span className="nbs-empty-icon"><SparklesIcon className="size-5" /></span>
+                    <div className="nbs-empty-title">You don&apos;t have a plan yet</div>
+                    <div className="nbs-empty-desc">Pick a monthly plan to unlock chat and document-powered answers.</div>
+                    <Link href="/plans" className="nbs-btn is-primary mt-4">
                         View plans
+                        <ArrowUpRightIcon className="size-4" />
                     </Link>
                 </div>
             ) : (
                 <>
-                    <div className={panelClass}>
-                        <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="nbs-plan-card">
+                        <div className="nbs-plan-card-glow" aria-hidden="true" />
+                        <div className="relative flex flex-wrap items-start justify-between gap-4">
                             <div className="min-w-0">
-                                <p className="user-portal-kicker">
-                                    Subscribed plan
-                                </p>
-                                <h3 className="user-portal-plans-card-title mt-1 truncate">
-                                    {plan?.name || profile.plan || 'Plan'}
-                                </h3>
-                                <div className="mt-2 flex flex-wrap items-center gap-2">
-                                    <span className="text-sm text-slate-500">
-                                        {plan?.price_display || '—'} / month
-                                    </span>
-                                    {subscription.status ? (
-                                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${statusBadgeClass(subscription.status)}`}>
-                                            {subscription.status}
-                                        </span>
-                                    ) : null}
-                                    <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold uppercase text-slate-600">
-                                        No auto-renew
-                                    </span>
+                                <div className="nbs-plan-kicker">
+                                    <CrownIcon className="size-3.5" />
+                                    Current plan
+                                </div>
+                                <div className="nbs-plan-name">{plan?.name || profile.plan || 'Plan'}</div>
+                                <div className="nbs-plan-price">
+                                    {plan?.price_display || '—'}<span> / month</span>
                                 </div>
                             </div>
-                            <div className="flex flex-wrap gap-2">
-                                <Link
-                                    href="/plans"
-                                    className="inline-flex h-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                                >
-                                    Change plan
-                                </Link>
-                                {isActive ? (
-                                    <button
-                                        type="button"
-                                        disabled={busy}
-                                        onClick={() => void cancelSubscription()}
-                                        className="inline-flex h-9 shrink-0 items-center justify-center rounded-full border border-rose-200 bg-white px-4 text-sm font-medium text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
-                                    >
-                                        {busy ? 'Cancelling…' : 'Cancel'}
-                                    </button>
-                                ) : null}
+                            <div className="flex flex-col items-end gap-2">
+                                {subscription.status ? <StatusPill status={subscription.status} className="is-on-dark" /> : null}
+                                <span className="nbs-plan-chip">No auto-renew</span>
                             </div>
                         </div>
 
-                        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                            <div className="rounded-lg bg-slate-50 px-3.5 py-3">
-                                <p className="user-portal-kicker">
-                                    Period start
-                                </p>
-                                <p className="mt-1 text-sm font-medium text-slate-800">
-                                    {formatDate(subscription.current_period_start)}
-                                </p>
+                        <div className="nbs-plan-period">
+                            <div>
+                                <span>Started</span>
+                                <strong>{formatDate(subscription.current_period_start)}</strong>
                             </div>
-                            <div className="rounded-lg bg-slate-50 px-3.5 py-3">
-                                <p className="user-portal-kicker">
-                                    Period ends
-                                </p>
-                                <p className="mt-1 text-sm font-medium text-slate-800">
-                                    {formatDate(subscription.current_period_end)}
-                                </p>
+                            <div>
+                                <span>Renews manually on</span>
+                                <strong>{formatDate(subscription.current_period_end)}</strong>
                             </div>
+                            {daysLeft !== null && (
+                                <div>
+                                    <span>Time left</span>
+                                    <strong>{daysLeft} day{daysLeft === 1 ? '' : 's'}</strong>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="relative mt-5 flex flex-wrap gap-2">
+                            <Link href="/plans" className="nbs-btn is-light">
+                                Change plan
+                            </Link>
+                            {isActive ? (
+                                <Link href="/tokens" className="nbs-btn is-light">
+                                    <PlusCircleIcon className="size-4" />
+                                    Buy tokens
+                                </Link>
+                            ) : null}
+                            {isActive ? (
+                                <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => void cancelSubscription()}
+                                    className="nbs-btn is-outline-light"
+                                >
+                                    {busy ? 'Cancelling…' : 'Cancel subscription'}
+                                </button>
+                            ) : null}
                         </div>
                     </div>
 
-                    <div className={panelClass}>
-                        <div className="mb-3 flex items-end justify-between gap-3">
-                            <div className="min-w-0">
-                                <h3 className="user-portal-section-title">Token consumption</h3>
-                                <p className="mt-0.5 text-xs text-slate-500">
-                                    {formatTokens(used)} used of {formatTokens(included)} this month
-                                </p>
+                    <Section
+                        icon={CoinsIcon}
+                        title="Token balance"
+                        description={`${formatTokens(totalAvailable)} tokens available — plan tokens are used first, then extra tokens.`}
+                        action={
+                            isActive ? (
+                                <Link href="/tokens" className="nbs-btn is-primary">
+                                    <PlusCircleIcon className="size-4" />
+                                    Buy tokens
+                                </Link>
+                            ) : null
+                        }
+                    >
+                        <div className="nbs-token-split">
+                            <div className="nbs-token-block">
+                                <div className="nbs-token-head">
+                                    <span className="nbs-token-label"><CrownIcon className="size-3.5" />Plan tokens</span>
+                                    <span className={`nbs-usage-percent ${usageTone(percent)}`}>{percent}% used</span>
+                                </div>
+                                <div className="nbs-meter" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-label="Plan token usage">
+                                    <span className={usageTone(percent)} style={{ width: `${percent}%` }} />
+                                </div>
+                                <div className="nbs-token-figures">
+                                    <span><strong>{formatTokens(remaining)}</strong> left</span>
+                                    <span>{formatTokens(used)} of {formatTokens(included)} used this period</span>
+                                </div>
                             </div>
-                            <p className="shrink-0 text-sm font-semibold text-slate-800">{percent}%</p>
+
+                            <div className="nbs-token-block is-extra">
+                                <div className="nbs-token-head">
+                                    <span className="nbs-token-label"><PlusCircleIcon className="size-3.5" />Extra tokens</span>
+                                    <span className="nbs-usage-percent">{extraTotal > 0 ? `${extraPercent}% used` : 'None yet'}</span>
+                                </div>
+                                <div className="nbs-meter is-extra" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={extraPercent} aria-label="Extra token usage">
+                                    <span style={{ width: `${extraPercent}%` }} />
+                                </div>
+                                <div className="nbs-token-figures">
+                                    <span><strong>{formatTokens(extraRemaining)}</strong> left</span>
+                                    <span>
+                                        {extraTotal > 0
+                                            ? `${formatTokens(extraUsed)} of ${formatTokens(extraTotal)} purchased used`
+                                            : 'Top up any time — they never expire'}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                        <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
-                            <div
-                                className="h-full rounded-full bg-[#2EAADB] transition-all"
-                                style={{ width: `${percent}%` }}
-                            />
-                        </div>
-                        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+
+                        {percent >= 80 && extraRemaining === 0 && (
+                            <div className={`nbs-inline-note ${usageTone(percent)}`}>
+                                <AlertIcon className="size-3.5" />
+                                {percent >= 95
+                                    ? 'You are almost out of tokens. Buy extra tokens to keep chatting without interruption.'
+                                    : 'You have used most of this period’s plan tokens.'}
+                            </div>
+                        )}
+
+                        <div className="nbs-stats">
                             {[
-                                { label: 'Used', value: formatTokens(used) },
-                                { label: 'Remaining', value: formatTokens(remaining) },
-                                { label: 'Included', value: formatTokens(included) },
+                                { label: 'Plan left', value: formatTokens(isActive ? remaining : 0) },
+                                { label: 'Extra left', value: formatTokens(extraRemaining) },
+                                { label: 'Total available', value: formatTokens(totalAvailable) },
                             ].map((stat) => (
-                                <div key={stat.label} className="rounded-lg bg-slate-50 px-3 py-3 text-center">
-                                    <p className="user-portal-page-title tabular-nums">{stat.value}</p>
-                                    <p className="user-portal-caption mt-0.5">{stat.label}</p>
+                                <div key={stat.label} className="nbs-stat">
+                                    <div className="nbs-stat-value">{stat.value}</div>
+                                    <div className="nbs-stat-label">{stat.label}</div>
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </Section>
 
                     {Array.isArray(plan?.features) && plan.features.length > 0 ? (
-                        <div className={panelClass}>
-                            <h3 className="user-portal-section-title mb-3">Plan features</h3>
-                            <ul className="space-y-2.5">
+                        <Section icon={CalendarIcon} title="What's included">
+                            <ul className="nbs-features">
                                 {plan.features.map((feature, idx) => (
-                                    <li key={`${feature}-${idx}`} className="flex items-start gap-2.5 text-sm text-slate-600">
-                                        <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-[#2EAADB]/15 text-[#2EAADB]">
-                                            <CheckIcon className="size-2.5" strokeWidth={3} />
+                                    <li key={`${feature}-${idx}`}>
+                                        <span className="nbs-feature-check" aria-hidden="true">
+                                            <CheckIcon className="size-3" strokeWidth={3} />
                                         </span>
-                                        <span className="leading-snug">{feature}</span>
+                                        <span>{feature}</span>
                                     </li>
                                 ))}
                             </ul>
-                        </div>
+                        </Section>
                     ) : null}
                 </>
             )}

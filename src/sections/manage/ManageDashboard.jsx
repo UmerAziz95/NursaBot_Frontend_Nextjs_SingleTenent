@@ -237,7 +237,7 @@ export default function ManageDashboard() {
             </header>
 
             <main className="mx-auto max-w-5xl px-6 py-8 space-y-6">
-                <Section icon={BuildingIcon} title="Businesses" addHref="/create-business" addLabel="Add business">
+                <Section icon={BuildingIcon} title="Businesses">
                     {businessesLoading && <EmptyRow>Loading businesses…</EmptyRow>}
                     {!businessesLoading && businessesError && <p className="text-sm text-red-600">{businessesError}</p>}
                     {!businessesLoading && !businessesError && businesses.length === 0 && (
@@ -268,8 +268,6 @@ export default function ManageDashboard() {
                 <Section
                     icon={WorkspaceIcon}
                     title="Workspaces"
-                    addHref={selectedBusiness ? `/create-workspace?business_client_id=${encodeURIComponent(selectedBusiness)}` : undefined}
-                    addLabel="Add workspace"
                 >
                     {!selectedBusiness && <EmptyRow>Select a business above to view its workspaces.</EmptyRow>}
                     {selectedBusiness && workspacesLoading && <EmptyRow>Loading workspaces…</EmptyRow>}

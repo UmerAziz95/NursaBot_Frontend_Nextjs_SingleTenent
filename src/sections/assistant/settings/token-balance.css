@@ -1,0 +1,64 @@
+/* Plan vs extra token balances in Settings, Plan & usage. */
+
+.nbs-token-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.nbs-token-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.875rem;
+  background: #fbfdfe;
+}
+
+.nbs-token-block.is-extra {
+  background: linear-gradient(180deg, rgba(68, 182, 185, 0.06), rgba(68, 182, 185, 0.02));
+  border-color: rgba(68, 182, 185, 0.28);
+}
+
+.nbs-token-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.nbs-token-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #053447;
+}
+
+.nbs-meter.is-extra span {
+  background: linear-gradient(90deg, #7dd3c0 0%, #44b6b9 100%);
+}
+
+.nbs-token-figures {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.nbs-token-figures strong {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+@media (max-width: 640px) {
+  .nbs-token-split {
+    grid-template-columns: 1fr;
+  }
+}

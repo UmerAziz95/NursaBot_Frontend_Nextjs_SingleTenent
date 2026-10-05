@@ -55,7 +55,7 @@ const pricingPlans = [
 
 export default function PricingSection() {
     return (
-        <section className="pricing-section py-10 lg:py-[6vw] relative overflow-hidden">
+        <section id="pricing" className="pricing-section py-10 lg:py-[6vw] relative overflow-hidden">
             <div className="wrapper relative z-10">
                 {/* Header */}
                 <div className="flex flex-col lg:flex-row items-center lg:items-end justify-between gap-4 lg:gap-[5vw] mb-8 lg:mb-[4vw]">
@@ -137,7 +137,7 @@ export default function PricingSection() {
 
                             {/* CTA Button */}
                             <Link
-                                href="/pricing"
+                                href="/signup"
                                 className={`block w-full text-center font-bold py-3 lg:py-4 rounded-lg transition-colors text-white ${plan.buttonClass}`}
                             >
                                 {plan.buttonText}

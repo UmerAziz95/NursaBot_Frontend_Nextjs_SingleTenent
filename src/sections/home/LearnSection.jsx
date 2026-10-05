@@ -14,7 +14,7 @@ const features = [
 
 export default function LearnSection() {
     return (
-        <section className="learn-section">
+        <section id="learn" className="learn-section">
             <div className="wrapper py-10 lg:py-[6vw] relative z-10">
                 <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-[2vw]">
 
@@ -76,7 +76,7 @@ export default function LearnSection() {
                         {/* CTA Button */}
                         <Link
                             data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2"
-                            href="/assistant"
+                            href="/signup"
                             className="block w-full bg-(--primary-color) text-white font-bold text-center py-3 lg:py-4 rounded-lg hover:bg-[#2599c4] transition-colors"
                         >
                             Chat with Olivia

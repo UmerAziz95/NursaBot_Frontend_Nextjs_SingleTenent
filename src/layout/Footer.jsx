@@ -49,22 +49,22 @@ export default function Footer() {
                                     </Link>
                                 </li>
                                 <li>
-                                    <Link href="/assistant" className="text-gray-300 hover:text-white transition-colors">
+                                    <Link href="/signin" className="text-gray-300 hover:text-white transition-colors">
                                         Assistant
                                     </Link>
                                 </li>
                                 <li>
-                                    <Link href="#" className="text-gray-300 hover:text-white transition-colors">
-                                        Study
+                                    <Link href="/signup" className="text-gray-300 hover:text-white transition-colors">
+                                        Sign up
                                     </Link>
                                 </li>
                                 <li>
-                                    <Link href="#" className="text-gray-300 hover:text-white transition-colors">
+                                    <Link href="/#progress" className="text-gray-300 hover:text-white transition-colors">
                                         Progress
                                     </Link>
                                 </li>
                                 <li>
-                                    <Link href="#" className="text-gray-300 hover:text-white transition-colors">
+                                    <Link href="/#faq" className="text-gray-300 hover:text-white transition-colors">
                                         FAQs
                                     </Link>
                                 </li>
@@ -83,22 +83,22 @@ export default function Footer() {
                                     </Link>
                                 </li>
                                 <li>
-                                    <Link href="#" className="text-gray-300 hover:text-white transition-colors">
+                                    <Link href="/#pricing" className="text-gray-300 hover:text-white transition-colors">
                                         Pricing
                                     </Link>
                                 </li>
                                 <li>
-                                    <Link href="#" className="text-gray-300 hover:text-white transition-colors">
-                                        Blog
+                                    <Link href="/#learn" className="text-gray-300 hover:text-white transition-colors">
+                                        Learn
                                     </Link>
                                 </li>
                                 <li>
-                                    <Link href="#" className="text-gray-300 hover:text-white transition-colors">
-                                        Help Center
+                                    <Link href="/signin" className="text-gray-300 hover:text-white transition-colors">
+                                        Sign in
                                     </Link>
                                 </li>
                                 <li>
-                                    <Link href="#" className="text-gray-300 hover:text-white transition-colors">
+                                    <Link href="/#contact" className="text-gray-300 hover:text-white transition-colors">
                                         Contact Us
                                     </Link>
                                 </li>

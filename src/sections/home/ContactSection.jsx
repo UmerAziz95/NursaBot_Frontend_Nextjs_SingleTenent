@@ -26,7 +26,7 @@ export default function ContactSection() {
     }
 
     return (
-        <section className="contact-section py-10 lg:py-[6vw] relative overflow-hidden">
+        <section id="contact" className="contact-section py-10 lg:py-[6vw] relative overflow-hidden">
             <div className="wrapper relative z-10">
                 <div className="flex flex-col lg:flex-row items-start justify-between gap-8 lg:gap-[5vw]">
                     {/* Left Side - Heading and Image */}

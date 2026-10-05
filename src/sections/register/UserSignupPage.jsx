@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from '@/lib/toast'
+import { persistAuthSession } from '@/lib/auth-session'
 import HoneypotFields, { emptyHoneypot } from '@/components/auth/HoneypotFields'
 import CaptchaWidget from '@/components/auth/CaptchaWidget'
 import { assertCaptchaReady, buildAuthProtectionPayload } from '@/lib/auth-protection'
@@ -83,21 +84,42 @@ export default function UserSignupPage() {
               const businessClientId = apiUser.business_client_id || data.business_client_id || ''
               const workspaceId = apiUser.workspace_id || data.workspace_id || ''
               const role = apiUser.role || data.role || 'user'
-              if (token) localStorage.setItem('token', token)
-              if (loginData.session) localStorage.setItem('session', JSON.stringify(loginData.session))
-              if (businessClientId) localStorage.setItem('business_client_id', businessClientId)
-              if (workspaceId) localStorage.setItem('workspace_id', workspaceId)
-              if (role) localStorage.setItem('role', role)
-              localStorage.setItem('user', JSON.stringify({
-                ...apiUser,
-                email: apiUser.email || formData.email,
+              const session = loginData.session || (token ? { access_token: token } : null)
+
+              persistAuthSession({
+                access_token: token,
+                expires_at: session?.expires_at,
+                expires_in: session?.expires_in,
                 role,
-              }))
-              if (loginData.subscription) localStorage.setItem('subscription', JSON.stringify(loginData.subscription))
-              localStorage.removeItem('api_chat_defaults')
+                user: {
+                  ...apiUser,
+                  email: apiUser.email || formData.email,
+                  role,
+                  business_client_id: businessClientId || apiUser.business_client_id,
+                  workspace_id: workspaceId || apiUser.workspace_id,
+                },
+                session,
+              })
+
+              if (businessClientId) {
+                try { localStorage.setItem('business_client_id', businessClientId) } catch (_) { /* ignore */ }
+              }
+              if (workspaceId) {
+                try { localStorage.setItem('workspace_id', workspaceId) } catch (_) { /* ignore */ }
+              }
+              if (loginData.subscription) {
+                try { localStorage.setItem('subscription', JSON.stringify(loginData.subscription)) } catch (_) { /* ignore */ }
+              }
+              try { localStorage.removeItem('api_chat_defaults') } catch (_) { /* ignore */ }
 
               toast.success('Account created! Redirecting…')
-              setTimeout(() => router.push('/plans'), 800)
+              setTimeout(() => {
+                router.push(
+                  loginData?.requires_plan
+                    ? (loginData?.requires_reactivation ? '/plans?reason=expired' : '/plans')
+                    : '/assistant'
+                )
+              }, 800)
               return
             }
           } catch (_) {
@@ -156,6 +178,9 @@ export default function UserSignupPage() {
           <div className="w-full order-2 lg:order-1">
             <div className="login-form rounded-2xl lg:rounded-[1.5vw] shadow-2xl p-6 lg:p-[2vw]">
               <div className="mb-6 lg:mb-[2vw]">
+                <Link href="/" className="mb-3 inline-block text-[12px] text-[#053447] hover:text-[#2EAADB] lg:mb-[0.8vw] lg:text-[0.75vw]">
+                  ← Back to home
+                </Link>
                 <h3 className="mb-2 lg:mb-[0.5vw] text-[16px] lg:text-[2vw] font-bold">Create Account</h3>
                 <p className="text-gray-600 text-[13px] lg:text-[0.9vw]">Create your site-user account to get started</p>
               </div>

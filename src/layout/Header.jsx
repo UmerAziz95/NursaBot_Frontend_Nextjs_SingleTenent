@@ -26,9 +26,9 @@ export default function Example() {
         <header className="fixed top-0 left-0 right-0 z-50 pt-[1vw]">
             <nav aria-label="Global" className="wrapper bg-black/5 backdrop-blur-[10px] px-5 py-3 lg:px-[2vw] border border-gray-300 rounded-full mx-auto flex items-center justify-between lg:py-[1vw]">
                 <div className="flex ">
-                    <a href="#" className="">
+                    <Link href="/" className="">
                         <span className="text-sm lg:text-[1.5vw] font-bold">{settings.site_name || 'LOGO'}</span>
-                    </a>
+                    </Link>
                 </div>
                
 

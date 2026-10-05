@@ -9,9 +9,13 @@ const loadTurnstileScript = () => {
 
     const existing = document.querySelector('script[data-turnstile="true"]')
     if (existing) {
-        return new Promise((resolve) => {
-            existing.addEventListener('load', () => resolve())
-            if (window.turnstile?.render) resolve()
+        return new Promise((resolve, reject) => {
+            if (window.turnstile?.render) {
+                resolve()
+                return
+            }
+            existing.addEventListener('load', () => resolve(), { once: true })
+            existing.addEventListener('error', () => reject(new Error('Failed to load Cloudflare captcha')), { once: true })
         })
     }
 
@@ -41,12 +45,26 @@ export default function CaptchaWidget({ onChange, refreshKey = 0 }) {
     const [error, setError] = useState('')
     const widgetRef = useRef(null)
     const widgetIdRef = useRef(null)
+    const requestIdRef = useRef(0)
 
     const emit = useCallback((payload) => {
         onChange?.(payload)
     }, [onChange])
 
+    const applyMathChallenge = useCallback((data) => {
+        setMode('math')
+        setSiteKey('')
+        setChallengeId(data?.challenge_id || '')
+        setQuestion(data?.question || 'Solve the challenge')
+        emit({
+            mode: 'math',
+            challenge_id: data?.challenge_id || '',
+            captcha_answer: '',
+        })
+    }, [emit])
+
     const loadChallenge = useCallback(async () => {
+        const requestId = ++requestIdRef.current
         setError('')
         setAnswer('')
         setMode('loading')
@@ -59,6 +77,8 @@ export default function CaptchaWidget({ onChange, refreshKey = 0 }) {
                 credentials: 'include',
             })
             const data = await res.json().catch(() => null)
+            if (requestId !== requestIdRef.current) return
+
             if (!res.ok) {
                 throw new Error(data?.detail || 'Could not load captcha.')
             }
@@ -70,33 +90,34 @@ export default function CaptchaWidget({ onChange, refreshKey = 0 }) {
                 return
             }
 
-            setMode('math')
-            setChallengeId(data?.challenge_id || '')
-            setQuestion(data?.question || 'Solve the challenge')
-            emit({
-                mode: 'math',
-                challenge_id: data?.challenge_id || '',
-                captcha_answer: '',
-            })
+            applyMathChallenge(data)
         } catch (err) {
+            if (requestId !== requestIdRef.current) return
             setMode('error')
             setError(err.message || 'Could not load captcha.')
             emit({ mode: 'error' })
         }
-    }, [emit])
+    }, [applyMathChallenge, emit])
 
     useEffect(() => {
         void loadChallenge()
     }, [loadChallenge, refreshKey])
 
     useEffect(() => {
-        if (mode !== 'turnstile' || !siteKey || !widgetRef.current) return undefined
+        if (mode !== 'turnstile' || !siteKey) return undefined
 
         let cancelled = false
+        let renderTimer = null
 
         const render = async () => {
             try {
                 await loadTurnstileScript()
+                if (cancelled) return
+
+                // Wait one frame so the widget container is mounted after mode switch.
+                await new Promise((resolve) => {
+                    renderTimer = window.setTimeout(resolve, 0)
+                })
                 if (cancelled || !widgetRef.current || !window.turnstile?.render) return
 
                 if (widgetIdRef.current !== null && window.turnstile?.remove) {
@@ -114,18 +135,28 @@ export default function CaptchaWidget({ onChange, refreshKey = 0 }) {
                     theme: 'light',
                     callback: (token) => emit({ mode: 'turnstile', captcha_token: token }),
                     'expired-callback': () => emit({ mode: 'turnstile', captcha_token: '' }),
-                    'error-callback': () => emit({ mode: 'turnstile', captcha_token: '' }),
+                    'error-callback': (code) => {
+                        const detail = code
+                            ? `Cloudflare captcha failed (code ${code}). The site key may be invalid or this domain is not allowed.`
+                            : 'Cloudflare captcha failed to load.'
+                        setError(detail)
+                        setMode('error')
+                        emit({ mode: 'error' })
+                    },
                     'timeout-callback': () => emit({ mode: 'turnstile', captcha_token: '' }),
                 })
             } catch (err) {
+                if (cancelled) return
                 setError(err.message || 'Captcha failed to load.')
                 setMode('error')
+                emit({ mode: 'error' })
             }
         }
 
         void render()
         return () => {
             cancelled = true
+            if (renderTimer) window.clearTimeout(renderTimer)
             if (widgetIdRef.current !== null && window.turnstile?.remove) {
                 try {
                     window.turnstile.remove(widgetIdRef.current)

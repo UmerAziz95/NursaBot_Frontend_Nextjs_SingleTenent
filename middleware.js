@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 export async function middleware(req) {
   const { pathname } = req.nextUrl
 
+  // Only force signup during first-time setup; otherwise show the marketing home.
   if (pathname === '/') {
     try {
       const statusUrl = new URL('/api/setup/status', req.nextUrl.origin)
@@ -12,7 +13,6 @@ export async function middleware(req) {
         if (data?.needs_setup) {
           return NextResponse.redirect(new URL('/signup', req.nextUrl.origin))
         }
-        return NextResponse.redirect(new URL('/login', req.nextUrl.origin))
       }
     } catch (e) {
       // If the status check fails, fall back to normal routing

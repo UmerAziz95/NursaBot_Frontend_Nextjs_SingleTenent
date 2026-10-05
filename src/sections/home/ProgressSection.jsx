@@ -9,7 +9,7 @@ const achievements = [
 
 export default function ProgressSection() {
     return (
-        <section className="progress-section py-10 lg:py-[6vw]">
+        <section id="progress" className="progress-section py-10 lg:py-[6vw]">
             <div className="wrapper relative z-10">
                 {/* Header */}
                 <div data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="head flex items-center gap-2 lg:gap-[0.3vw] mb-4 lg:mb-[1.5vw]">
@@ -156,7 +156,7 @@ export default function ProgressSection() {
                 {/* Call to Action Button */}
                 <div data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="flex justify-center">
                     <Link
-                        href="/analytics"
+                        href="/signup"
                         className="bg-[#053447] text-white font-bold px-8 lg:px-[3vw] py-3 lg:py-[1vw] rounded-lg hover:bg-[#042a38] transition-colors text-sm lg:text-base"
                     >
                         View Detailed Analytics

@@ -41,7 +41,7 @@ const faqs = [
 
 export default function FAQSection() {
     return (
-        <section className="faq-section py-10 lg:py-[6vw] relative overflow-hidden">
+        <section id="faq" className="faq-section py-10 lg:py-[6vw] relative overflow-hidden">
             <div className="wrapper relative z-10">
                 {/* Header */}
                 <div className="flex flex-col lg:flex-row items-start md:items-end justify-between gap-4 lg:gap-[5vw] mb-8 lg:mb-[4vw]">

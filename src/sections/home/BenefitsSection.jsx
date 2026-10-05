@@ -28,7 +28,7 @@ const workSteps = [
 
 export default function BenefitsSection() {
     return (
-        <section className="benefits-section">
+        <section id="benefits" className="benefits-section">
             <div className="wrapper py-10 lg:py-[6vw] relative z-10">
                 <div data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="head flex items-center gap-2 lg:gap-[0.3vw] mb-4 lg:mb-[1.5vw]">
                     <img src="/stat-1.svg" alt="stat icon" />
@@ -60,11 +60,11 @@ export default function BenefitsSection() {
                         ))}
 
                         <div className="flex items-center gap-2 lg:gap-[0.8vw] w-full">
-                            <Link data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="btn-primary text-nowrap" href="/assistant">
+                            <Link data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="btn-primary text-nowrap" href="/signup">
                                 Quick Assessment
 
                             </Link>
-                            <Link data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="btn-secondary text-nowrap" href="/assistant">
+                            <Link data-gsap-animate data-gsap-variant="blur-in" data-gsap-duration="1.2" className="btn-secondary text-nowrap" href="/signin">
                                 Start Practice Mode
                             </Link>
                         </div>

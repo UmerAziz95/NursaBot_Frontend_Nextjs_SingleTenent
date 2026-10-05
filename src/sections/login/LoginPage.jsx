@@ -118,6 +118,9 @@ export default function LoginPage() {
                     <div className="w-full order-2 lg:order-1">
                         <div className="login-form rounded-2xl lg:rounded-[1.5vw] shadow-2xl p-6 lg:p-[2vw]">
                             <div className="mb-6 lg:mb-[2vw]">
+                                <Link href="/" className="mb-3 inline-block text-[12px] text-[#053447] hover:text-[#2EAADB] lg:mb-[0.8vw] lg:text-[0.75vw]">
+                                    ← Back to home
+                                </Link>
                                 <h3 className="mb-2 lg:mb-[0.5vw] text-[16px] lg:text-[2vw] font-bold">Welcome Back</h3>
                                 <p className="text-gray-600 text-[13px] lg:text-[0.9vw]">
                                     Sign in to continue to your account
